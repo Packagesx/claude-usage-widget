@@ -24,6 +24,7 @@ const DEFAULTS = {
   refreshMinutes: 2,
   material: 'acrylic',        // acrylic | mica | clear
   font: 'anuphan',            // anuphan | plex | prompt | noto
+  showOther: false,           // show quotas with unrecognised (codename) keys
   orgId: null,
   notify: true,
   notified: {},               // { key: resets_at|threshold }
@@ -134,6 +135,8 @@ function buildTrayMenu() {
       click: (i) => { app.setLoginItemSettings({ openAtLogin: i.checked }); } },
     { label: 'แจ้งเตือนเมื่อใช้ถึง 80% / 95%', type: 'checkbox', checked: settings.notify,
       click: (i) => { settings.notify = i.checked; saveSettings(); } },
+    { label: 'แสดงโควตาอื่นที่ claude.ai ไม่ได้ตั้งชื่อ', type: 'checkbox', checked: settings.showOther,
+      click: (i) => { settings.showOther = i.checked; saveSettings(); refresh(); } },
     { label: 'ความถี่รีเฟรช', submenu: [1, 2, 5, 10].map(interval) },
     { label: 'ฟอนต์', submenu: [
       ['anuphan', 'Anuphan (โมเดิร์น — ค่าเริ่มต้น)'], ['plex', 'IBM Plex Sans Thai (เรียบ คม)'],
@@ -226,14 +229,17 @@ const LABELS = {
 function normalize(usage) {
   const items = [];
   for (const [key, v] of Object.entries(usage || {})) {
-    if (!LABELS[key] || !v || typeof v !== 'object') continue;
+    if (!v || typeof v !== 'object') continue;
     const u = v.utilization;
     if (typeof u !== 'number') continue;
     if (key === 'extra_usage' && v.is_enabled === false) continue;
-    items.push({ key, pct: Math.max(0, Math.min(100, u)), resetsAt: v.resets_at || null, ...LABELS[key] });
+    const meta = LABELS[key] || (settings.showOther ? { th: 'โควตาอื่น', sub: key.replace(/_/g, ' ') } : null);
+    if (!meta) continue;
+    items.push({ key, pct: Math.max(0, Math.min(100, u)), resetsAt: v.resets_at || null, ...meta });
   }
   const order = Object.keys(LABELS);
-  items.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+  const rank = (k) => (order.indexOf(k) + 1) || 99;
+  items.sort((a, b) => rank(a.key) - rank(b.key));
   return items;
 }
 
