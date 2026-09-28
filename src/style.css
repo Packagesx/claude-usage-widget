@@ -40,11 +40,11 @@
 }
 /* Clear-glass mode: window is fully transparent, so we paint more tint ourselves */
 html[data-material="clear"] { --radius: 24px; }
-html[data-material="clear"] .glass { background: var(--tint), rgba(246,248,255,.62); }
+html[data-material="clear"]:not([data-glass="none"]) .glass { background: var(--tint), rgba(246,248,255,.62); }
 @media (prefers-color-scheme: dark) {
-  html[data-material="clear"] .glass { background: var(--tint), rgba(16,18,28,.62); }
+  html[data-material="clear"]:not([data-glass="none"]) .glass { background: var(--tint), rgba(16,18,28,.62); }
 }
-html[data-material="clear"] .aurora { opacity: 1; }
+html[data-material="clear"]:not([data-glass="none"]) .aurora { opacity: 1; }
 html[data-material="clear"] body { padding: 0; }
 
 html[data-font="plex"]   { --font: "IBM Plex Sans Thai", var(--fallback); }
@@ -404,3 +404,20 @@ html[data-color="rgb"] #btn-color svg { fill: url(#rgbfill); opacity: 1; }
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.9); } 15%, 80% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
 .gauge { position: relative; }
 .prow .capsule { grid-column: auto; }
+
+/* ---------------- truly clear glass: no tint, no blur — just the rim ---------------- */
+html[data-glass="none"] .glass {
+  background: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12), inset 0 0 0 1px rgba(255,255,255,.14);
+}
+html[data-glass="none"] .edge { background: linear-gradient(135deg, rgba(255,255,255,.75), transparent 38%, transparent 62%, rgba(255,255,255,.25)); }
+html[data-glass="none"] .specular { opacity: .35; }
+html[data-glass="none"] :is(.aurora, .gtint, .rgbglow) { display: none; }
+html[data-glass="none"] .foot { border-top-color: rgba(255,255,255,.18); }
+/* nothing behind the text, so always use light text with a dark halo — readable on any wallpaper */
+html[data-glass="none"] { --ink: #fff; --ink-2: rgba(255,255,255,.88); --ink-3: rgba(255,255,255,.72); --shadow-ink: rgba(0,0,0,.45);
+  --btn: rgba(255,255,255,.12); --btn-hover: rgba(255,255,255,.26); --well: rgba(255,255,255,.10); --well-edge: rgba(255,255,255,.4); --well-shade: rgba(0,0,0,.25); }
+html[data-glass="none"] :is(.titles, .glabel, .row, .prow, .products .ph, .foot, .colorp, .auth) {
+  text-shadow: 0 1px 2px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.35); }
+
+.seg { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }

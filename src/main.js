@@ -25,7 +25,7 @@ const DEFAULTS = {
   material: 'acrylic',        // acrylic | mica | clear
   font: 'anuphan',            // anuphan | plex | prompt | noto
   color: { mode: 'level', hex: '#3a7bff', speed: 8, warn: true }, // liquid: level | solid | rgb
-  glass: { mode: 'none', hex: '#7b5cff', strength: 55 },         // glass tint: none | solid | rgb
+  glass: { mode: 'frost', hex: '#7b5cff', strength: 55 },        // none (truly clear) | frost | solid | rgb
   orgId: null,
   notify: true,
   notified: {},               // { key: resets_at|threshold }
@@ -41,7 +41,10 @@ function saveSettings() {
 }
 
 // ---------- state ----------
-let win = null, tray = null, fetcher = null, loginWin = null;
+let win = null, tray = null, fetcher = null, loginWin = null, currentMaterial = null;
+// 'Clear' glass means no blur at all, so it needs a fully transparent window;
+// the other glass modes sit on the blur material chosen in the tray (Acrylic by default).
+const windowMaterial = () => (settings.glass && settings.glass.mode === 'none' ? 'clear' : settings.material);
 let timer = null, orgs = [], lastPayload = null, quitting = false;
 
 const claudeSession = () => session.fromPartition(PARTITION);
@@ -59,7 +62,8 @@ function createWidget() {
   const d = screen.getDisplayMatching(b).workArea;
   if (b.x < d.x || b.y < d.y || b.x > d.x + d.width - 40 || b.y > d.y + d.height - 40) b = defaultBounds(W, H);
 
-  const material = settings.material;
+  const material = windowMaterial();
+  currentMaterial = material;
   const opts = {
     x: b.x, y: b.y, width: W, height: b.height || H,
     frame: false,
@@ -113,7 +117,7 @@ function buildTrayMenu() {
   const login = app.getLoginItemSettings();
   const mat = (id, label) => ({
     label, type: 'radio', checked: settings.material === id,
-    click: () => { if (settings.material !== id) { settings.material = id; saveSettings(); relaunch(); } },
+    click: () => { if (settings.material !== id) { settings.material = id; saveSettings(); if (windowMaterial() !== currentMaterial) relaunch(); else buildTrayMenu(); } },
   });
   const interval = (m) => ({
     label: m === 1 ? 'ทุก 1 นาที' : `ทุก ${m} นาที`, type: 'radio', checked: settings.refreshMinutes === m,
@@ -144,7 +148,7 @@ function buildTrayMenu() {
       ['prompt', 'Prompt (กลมมน)'], ['noto', 'Noto Sans Thai (มาตรฐาน)'],
     ].map(([id, label]) => ({ label, type: 'radio', checked: settings.font === id,
       click: () => { settings.font = id; saveSettings(); win && win.webContents.send('font', id); buildTrayMenu(); } })) },
-    { label: 'วัสดุกระจก', submenu: [
+    { label: 'วัสดุเบลอ (โหมดฝ้า / ใส่สี / RGB)', submenu: [
       mat('acrylic', 'Acrylic (เบลอ desktop — แนะนำ)'),
       mat('mica', 'Mica (เนียน ๆ ตามวอลเปเปอร์)'),
       mat('clear', 'Clear Glass (ใส — ใช้ถ้าเครื่องไม่รองรับ)'),
@@ -469,7 +473,7 @@ async function signOut() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: settings.material, color: settings.color, glass: settings.glass }));
+ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass }));
 ipcMain.on('set-color', (_e, c) => {
   if (!c || typeof c !== 'object') return;
   const hex = /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : settings.color.hex;
@@ -481,11 +485,13 @@ ipcMain.on('set-color', (_e, c) => {
 ipcMain.on('set-glass', (_e, g) => {
   if (!g || typeof g !== 'object') return;
   settings.glass = {
-    mode: ['none', 'solid', 'rgb'].includes(g.mode) ? g.mode : 'none',
+    mode: ['none', 'frost', 'solid', 'rgb'].includes(g.mode) ? g.mode : 'frost',
     hex: /^#[0-9a-f]{6}$/i.test(g.hex) ? g.hex : settings.glass.hex,
     strength: Math.max(10, Math.min(100, Number(g.strength) || 55)),
   };
   saveSettings();
+  // switching between truly-clear and blurred glass needs a new window
+  if (windowMaterial() !== currentMaterial) setTimeout(relaunch, 350);
 });
 ipcMain.on('refresh', () => { productsAt = 0; refresh(); });
 ipcMain.on('login', () => openLogin());

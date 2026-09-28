@@ -20,7 +20,7 @@
     }[mock];
     let cb = () => {};
     return {
-      getInitial: async () => ({ payload: null, glass: { mode: params.get('glass') || 'none', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'level', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
+      getInitial: async () => ({ payload: null, glass: { mode: params.get('glass') || 'frost', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'level', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
       setColor() {}, setGlass() {},
       onUsage: (f) => { cb = f; setTimeout(() => f(data), 300); },
       refresh: () => { cb({ ...data, state: 'loading' }); setTimeout(() => cb({ ...data, updatedAt: Date.now() }), 600); },
@@ -255,15 +255,15 @@
   // ---- colour customisation: liquid + glass ----
   const PRESETS = ['#3a7bff', '#7b5cff', '#ff4fa3', '#ff5a5a', '#ff9a3c', '#d9774f', '#1fc8a0'];
   let color = { mode: 'level', hex: '#3a7bff', speed: 8, warn: true };
-  let glass = { mode: 'none', hex: '#7b5cff', strength: 55 };
+  let glass = { mode: 'frost', hex: '#7b5cff', strength: 55 };
   let tab = 'liquid';
   const MODES = {
     liquid: [['level', 'ตามระดับ'], ['solid', 'สีเดียว'], ['rgb', 'RGB']],
-    glass: [['none', 'ใส'], ['solid', 'ใส่สี'], ['rgb', 'RGB']],
+    glass: [['none', 'ใส'], ['frost', 'ฝ้า'], ['solid', 'ใส่สี'], ['rgb', 'RGB']],
   };
   const HINTS = {
     liquid: { level: 'ฟ้า → ส้ม → แดง ตาม % ที่ใช้', solid: 'เลือกสีด้านล่าง หรือกด + เลือกสีเอง', rgb: 'ของเหลวไล่สีรุ้งวนตลอดเวลา' },
-    glass: { none: 'กระจกใสตามพื้นหลัง', solid: 'กระจกย้อมสีแบบ Liquid Glass', rgb: 'แสงรุ้งเบลอๆ ลอยอยู่ข้างในกระจก' },
+    glass: { none: 'ใสจริง ไม่มีสี ไม่เบลอ · สลับโหมดนี้แอปจะรีสตาร์ตแป๊บนึง', frost: 'กระจกฝ้าเบลอพื้นหลัง (แบบเดิม)', solid: 'กระจกย้อมสีแบบ Liquid Glass', rgb: 'แสงรุ้งเบลอๆ ลอยอยู่ข้างในกระจก' },
   };
   function hexToHsl(hex) {
     const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
@@ -296,8 +296,8 @@
     $('#mode-hint').textContent = HINTS[tab][c.mode];
     document.querySelectorAll('.swatch[data-hex]').forEach((b) => b.setAttribute('aria-checked', String(c.mode === 'solid' && b.dataset.hex.toLowerCase() === c.hex.toLowerCase())));
     $('#color-input').value = c.hex;
-    $('#view-color').classList.toggle('dim-swatches', c.mode === 'rgb' || (tab === 'liquid' && c.mode === 'level'));
-    $('#strength-row').hidden = tab !== 'glass' || glass.mode === 'none';
+    $('#view-color').classList.toggle('dim-swatches', c.mode !== 'solid');
+    $('#strength-row').hidden = tab !== 'glass' || !['solid', 'rgb'].includes(glass.mode);
     $('#strength').value = glass.strength; $('#strength-val').textContent = `${glass.strength}%`;
     $('#speed-row').hidden = c.mode !== 'rgb';
     $('#speed').value = color.speed; $('#speed-val').textContent = `${color.speed} วิ`;

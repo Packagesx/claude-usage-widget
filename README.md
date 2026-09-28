@@ -56,7 +56,7 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - Organization switcher, if you belong to more than one
 - Colours are customisable from the droplet button, with separate settings for the **liquid** and the **glass**:
   - Liquid: **By level** (blue → amber → red, the default), **Single colour** (7 presets or any custom colour), or **RGB** (a rainbow cycle)
-  - Glass: **Clear**, **Tinted** (a Liquid Glass-style colour tint with adjustable strength), or **RGB** (a soft, blurred rainbow light moving inside the glass)
+  - Glass: **Clear** (truly clear, with no tint and no blur; only the rim and highlights remain), **Frosted** (blurred Acrylic, the default), **Tinted** (a Liquid Glass-style colour tint with adjustable strength), or **RGB** (a soft, blurred rainbow light moving inside the glass)
   - An optional red warning above 90% usage
 - Click a liquid orb to make it slosh, bubble and splash. Poke it a few times fast and see what happens.
 - Follows the Windows light/dark theme.
