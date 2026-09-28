@@ -106,10 +106,11 @@ function createWidget() {
   }
 
   win = new BrowserWindow(opts);
+  anchor = null; // decided from the first real bounds
   win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font, collapsed: settings.collapsed ? '1' : '', locked: settings.locked ? '1' : '', layout: 'full', ghost: settings.ghost ? '1' : '', lowfx: settings.lowfx ? '1' : '' } });
   win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(settings.scale));
   win.once('ready-to-show', () => { win.showInactive(); if (settings.ghost) win.setIgnoreMouseEvents(true, { forward: true }); });
-  win.on('moved', () => { if (!dock.hidden && !sliding) { snapToEdges(); settings.bounds = win.getBounds(); saveSettings(); } });
+  win.on('moved', () => { if (!dock.hidden && !sliding) { snapToEdges(); settings.bounds = win.getBounds(); setAnchorFrom(settings.bounds); saveSettings(); } });
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); } });
 }
 
@@ -687,15 +688,25 @@ ipcMain.on('resize', (_e, size) => {
 
 // Keep the corner nearest the screen edge fixed when the widget grows or shrinks,
 // so expanding from the pill never jumps away from where you put it.
-function anchoredBounds(b, w, h) {
+// Which corner stays put is decided when the widget is *placed* (dragged, snapped, started),
+// not every time it resizes. Deciding on every resize made it flip sides after expanding past
+// the middle of the screen, so collapsing jumped to a new spot. We also remember the corner's
+// exact coordinate, so clamping a tall panel near a screen edge never shifts the "home" position.
+let anchor = null; // { right, bottom, x, y } — x/y is the fixed corner
+function setAnchorFrom(b) {
   const wa = screen.getDisplayMatching(b).workArea;
   const right = b.x + b.width / 2 > wa.x + wa.width / 2;
   const bottom = b.y + b.height / 2 > wa.y + wa.height / 2;
-  let x = right ? b.x + b.width - w : b.x;
-  let y = bottom ? b.y + b.height - h : b.y;
+  anchor = { right, bottom, x: right ? b.x + b.width : b.x, y: bottom ? b.y + b.height : b.y };
+  if (win) win.webContents.send('anchor', { right, bottom });
+}
+function anchoredBounds(b, w, h) {
+  if (!anchor) setAnchorFrom(b);
+  const wa = screen.getDisplayMatching(b).workArea;
+  let x = anchor.right ? anchor.x - w : anchor.x;
+  let y = anchor.bottom ? anchor.y - h : anchor.y;
   x = Math.max(wa.x, Math.min(x, wa.x + wa.width - w));
   y = Math.max(wa.y, Math.min(y, wa.y + wa.height - h));
-  if (win) win.webContents.send('anchor', { right, bottom });
   return { x, y, width: w, height: h };
 }
 
