@@ -10,6 +10,10 @@
     const h = 36e5, now = Date.now();
     const data = {
       ok: { state: 'ok', org: 'Pro · you@example.com', updatedAt: now,
+        burn: (() => { const start = now - 2.7 * h, pts = []; let p = 0;
+          for (let t = start; t <= now; t += 6 * 6e4) { p = Math.min(42, p + Math.random() * 2.2 + (t > now - 1.2 * h ? 0.8 : 0)); pts.push([t, p]); }
+          pts[pts.length - 1][1] = 42;
+          return { rate: 18, eta: now + (58 / 18) * h * (params.get('burn') === 'safe' ? 1 : 0.55), verdict: params.get('burn') || 'runout', spark: pts, start, end: now + 2.3 * h }; })(),
         products: { title: 'This week’s usage by product', rows: [{ name: 'Claude Code', pct: 12 }, { name: 'Chats', pct: 23 }, { name: 'Cowork', pct: 65 }, { name: 'Other', pct: 0 }] },
         items: [
         { key: 'five_hour', th: 'เซสชันนี้', sub: 'รอบ 5 ชั่วโมง', pct: 42, resetsAt: new Date(now + 2.3 * h).toISOString() },
@@ -158,6 +162,9 @@
     else { $('#orbs').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-2);text-align:center">ไม่มีข้อมูล usage สำหรับบัญชีนี้</p>'; }
 
     renderProducts(p.products);
+    renderBurn(p.burn, (p.items || []).find((i) => i.key === 'five_hour'));
+    drawTrayIcon((p.items || []).find((i) => i.key === 'five_hour'));
+    updateChevMini(p.items);
     if (p.org) $('#org').textContent = p.org;
     const u = $('#updated');
     if (p.state === 'error') {
@@ -250,6 +257,85 @@
     host.appendChild(t); setTimeout(() => t.remove(), 1850);
   }
   $('#orbs').addEventListener('click', (ev) => { const orb = ev.target.closest('.orb'); if (orb && !orb.classList.contains('skeleton')) poke(orb, ev); });
+
+  // ---- collapse / expand the details ----
+  let collapsed = params.get('collapsed') === '1';
+  function applyCollapsed(animate = true) {
+    const d = $('#details');
+    if (!animate) d.style.transition = 'none';
+    d.classList.toggle('closed', collapsed);
+    document.documentElement.classList.toggle('collapsed', collapsed);
+    $('#btn-chev').setAttribute('aria-expanded', String(!collapsed));
+    $('#btn-chev').title = collapsed ? 'แสดงรายละเอียด' : 'ซ่อนรายละเอียด';
+    if (!animate) requestAnimationFrame(() => (d.style.transition = ''));
+    // follow the height animation so the window shrinks/grows smoothly
+    const t0 = performance.now();
+    (function track() { fit(); if (performance.now() - t0 < 420) requestAnimationFrame(track); })();
+  }
+  function toggleCollapsed() { collapsed = !collapsed; applyCollapsed(); api.setPref && api.setPref({ collapsed }); }
+  $('#btn-chev').onclick = toggleCollapsed;
+  api.onToggleCollapse && api.onToggleCollapse(toggleCollapsed);
+  applyCollapsed(false);
+  function updateChevMini(items) {
+    const credit = (items || []).find((i) => i.kind === 'credit');
+    $('#chev-mini').textContent = credit ? `เครดิตเหลือ $${credit.left.toFixed(2)}` : 'รายละเอียด';
+  }
+
+  // ---- lock position ----
+  const setLocked = (v) => (document.documentElement.dataset.locked = v ? '1' : '');
+  setLocked(params.get('locked') === '1');
+  api.onLocked && api.onLocked(setLocked);
+  api.onRefit && api.onRefit(fit);
+
+  // ---- session pace: burn rate + sparkline ----
+  function renderBurn(b, sess) {
+    const el = $('#burn');
+    if (!b || !sess || !b.spark || b.spark.length < 2 || !b.start || !b.end) { el.hidden = true; return; }
+    el.hidden = false;
+    const W = 300, H = 30, span = b.end - b.start;
+    const X = (t) => Math.max(0, Math.min(W, ((t - b.start) / span) * W));
+    const Y = (p) => H - (Math.max(0, Math.min(100, p)) / 100) * H;
+    const pts = b.spark.filter(([t]) => t >= b.start - 6e4).map(([t, p]) => [X(t), Y(p)]);
+    if (pts.length < 2) { el.hidden = true; return; }
+    const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+    const area = `${line}L${pts[pts.length - 1][0].toFixed(1)},${H}L${pts[0][0].toFixed(1)},${H}Z`;
+    const [nx, ny] = pts[pts.length - 1];
+    let proj = '';
+    if (b.eta && b.verdict !== 'idle') {
+      const ex = X(Math.min(b.eta, b.end)), ey = b.eta <= b.end ? 0 : Y(sess.pct + (b.rate || 0) * ((b.end - Date.now()) / 36e5));
+      proj = `<path class="proj" d="M${nx.toFixed(1)},${ny.toFixed(1)}L${ex.toFixed(1)},${ey.toFixed(1)}"/>`;
+    }
+    const hm = (t) => new Date(t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const txt = {
+      learning: ['', 'กำลังเก็บข้อมูล…'],
+      idle: ['', 'ช่วงนี้แทบไม่ได้ใช้'],
+      safe: ['safe', `+${Math.round(b.rate)}%/ชม. · พอใช้ถึงรีเซ็ต ✓`],
+      runout: ['runout', `+${Math.round(b.rate)}%/ชม. · คาดว่าเต็ม ${b.eta ? hm(b.eta) : ''}`],
+    }[b.verdict] || ['', ''];
+    el.innerHTML = `<span class="bh">จังหวะการใช้เซสชัน</span><span class="bv ${txt[0]}">${txt[1]}</span>
+      <svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <line class="cap" x1="0" y1="0.5" x2="${W}" y2="0.5"/>
+        <path class="area" d="${area}"/><path class="line" d="${line}"/>${proj}
+        <circle class="now" cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="2.8"/>
+      </svg>
+      <div class="bf"><span>${hm(b.start)}</span><span>รีเซ็ต ${hm(b.end)}</span></div>`;
+  }
+
+  // ---- tray icon: a tiny ring showing the session % ----
+  let lastTray = '';
+  function drawTrayIcon(sess) {
+    if (!api.setTrayIcon || !sess) return;
+    const pct = Math.round(sess.pct), key = `${pct}|${level(sess.pct)}`;
+    if (key === lastTray) return; lastTray = key;
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), col = { ok: '#4aa3ff', warn: '#ff9a3c', hot: '#ff3b5c' }[level(sess.pct)];
+    g.lineWidth = 9; g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = col; g.beginPath(); g.arc(32, 32, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.02, pct / 100)); g.stroke();
+    g.fillStyle = '#fff'; g.font = `bold ${pct >= 100 ? 22 : 28}px "Segoe UI", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 3; g.fillText(String(pct), 32, 34);
+    api.setTrayIcon(c.toDataURL('image/png'));
+  }
 
   api.onUsage(render);
   // ---- colour customisation: liquid + glass ----

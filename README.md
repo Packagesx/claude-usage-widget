@@ -58,6 +58,13 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - Liquid: **By level** (blue → amber → red, the default), **Single colour** (7 presets or any custom colour), or **RGB** (a rainbow cycle)
   - Glass: **Clear** (truly clear, with no tint and no blur; only the rim and highlights remain), **Frosted** (blurred Acrylic, the default), **Tinted** (a Liquid Glass-style colour tint with adjustable strength), or **RGB** (a soft, blurred rainbow light moving inside the glass)
   - An optional red warning above 90% usage
+- **Collapse** the details with the arrow under the orbs. Collapsed, the widget is just the two orbs; the arrow shows your remaining cloud credit.
+- **Session pace**: a sparkline of the current 5-hour window and your burn rate (%/hour). It also tells you whether you'll hit the limit before the reset (e.g. "expected full at 15:07").
+- **Widget size**: 75% / 85% / 100% / 115%, set from the tray.
+- **Tray icon** shows your session % as a small coloured ring.
+- **Global shortcut** `Ctrl+Alt+C` shows or hides the widget.
+- **Lock position**, so the widget can't be dragged by accident.
+- A notification when your 5-hour session resets, plus a red pulse on an orb that is above 90%.
 - Click a liquid orb to make it slosh, bubble and splash. Poke it a few times fast and see what happens.
 - Follows the Windows light/dark theme.
 - Remembers where you placed it on screen.

@@ -1,6 +1,6 @@
 // Claude Usage Widget — main process
 const {
-  app, BrowserWindow, Tray, Menu, ipcMain, session, screen,
+  app, BrowserWindow, Tray, Menu, ipcMain, session, screen, globalShortcut,
   nativeImage, Notification, shell, nativeTheme,
 } = require('electron');
 const path = require('path');
@@ -24,6 +24,9 @@ const DEFAULTS = {
   refreshMinutes: 2,
   material: 'acrylic',        // acrylic | mica | clear
   font: 'anuphan',            // anuphan | plex | prompt | noto
+  scale: 1,                   // widget size: 0.75 | 0.85 | 1 | 1.15
+  collapsed: false,           // hide the details below the orbs
+  locked: false,              // lock position (no dragging)
   color: { mode: 'level', hex: '#3a7bff', speed: 8, warn: true }, // liquid: level | solid | rgb
   glass: { mode: 'frost', hex: '#7b5cff', strength: 55 },        // none (truly clear) | frost | solid | rgb
   orgId: null,
@@ -56,7 +59,7 @@ function defaultBounds(w, h) {
 }
 
 function createWidget() {
-  const W = 340, H = 300;
+  const W = Math.round(340 * settings.scale), H = Math.round(300 * settings.scale);
   let b = settings.bounds || defaultBounds(W, H);
   // keep on a visible display
   const d = screen.getDisplayMatching(b).workArea;
@@ -94,7 +97,8 @@ function createWidget() {
   }
 
   win = new BrowserWindow(opts);
-  win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font } });
+  win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font, collapsed: settings.collapsed ? '1' : '', locked: settings.locked ? '1' : '' } });
+  win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(settings.scale));
   win.once('ready-to-show', () => win.showInactive());
   win.on('moved', () => { settings.bounds = win.getBounds(); saveSettings(); });
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); } });
@@ -135,6 +139,13 @@ function buildTrayMenu() {
     { label: 'แสดง / ซ่อน widget', click: toggleWidget },
     { label: 'รีเฟรชตอนนี้', click: () => refresh() },
     { type: 'separator' },
+    { label: 'ขนาด widget', submenu: [[0.75, 'เล็ก (75%)'], [0.85, 'กลาง (85%)'], [1, 'ปกติ (100%)'], [1.15, 'ใหญ่ (115%)']].map(([v, label]) => ({
+      label, type: 'radio', checked: settings.scale === v,
+      click: () => { settings.scale = v; saveSettings(); applyScale(); buildTrayMenu(); } })) },
+    { label: 'ย่อ / ขยายรายละเอียด', click: () => win && win.webContents.send('toggle-collapse') },
+    { label: 'ล็อกตำแหน่ง (ลากไม่ได้)', type: 'checkbox', checked: settings.locked,
+      click: (i) => { settings.locked = i.checked; saveSettings(); win && win.webContents.send('locked', i.checked); } },
+    { label: 'คีย์ลัด แสดง/ซ่อน: Ctrl+Alt+C', enabled: false },
     { label: 'อยู่บนสุดเสมอ', type: 'checkbox', checked: settings.alwaysOnTop,
       click: (i) => { settings.alwaysOnTop = i.checked; saveSettings(); win && win.setAlwaysOnTop(i.checked); } },
     { label: 'เปิดพร้อม Windows', type: 'checkbox', checked: login.openAtLogin,
@@ -171,6 +182,14 @@ function createTray() {
   tray.setToolTip('Claude Usage');
   tray.on('click', toggleWidget);
   buildTrayMenu();
+}
+
+function applyScale() {
+  if (!win) return;
+  const b = win.getBounds();
+  win.webContents.setZoomFactor(settings.scale);
+  win.setBounds({ ...b, width: Math.round(340 * settings.scale) });
+  win.webContents.send('refit');
 }
 
 function relaunch() { quitting = true; app.relaunch(); app.exit(0); }
@@ -275,6 +294,45 @@ function orgLabel(o) {
   return [plan, name].filter(Boolean).join(' · ');
 }
 
+// ---------- session history -> burn rate & sparkline ----------
+const histPath = () => path.join(app.getPath('userData'), 'history.json');
+let history = null; // { resetsAt, samples: [[t, pct], ...] } for the current 5-hour window
+function loadHistory() { try { history = JSON.parse(fs.readFileSync(histPath(), 'utf8')); } catch { history = null; } }
+function recordSession(it) {
+  if (!it) return null;
+  if (!history || history.resetsAt !== it.resetsAt) history = { resetsAt: it.resetsAt, samples: [] };
+  const now = Date.now(), last = history.samples[history.samples.length - 1];
+  if (!last || now - last[0] > 50 * 1000) history.samples.push([now, it.pct]);
+  if (history.samples.length > 400) history.samples.splice(0, history.samples.length - 400);
+  try { fs.writeFileSync(histPath(), JSON.stringify(history)); } catch {}
+  // rate over the last ~45 minutes (needs at least 10 minutes of data)
+  const recent = history.samples.filter(([t]) => now - t <= 45 * 60 * 1000);
+  let rate = null, eta = null, verdict = 'learning';
+  if (recent.length >= 2 && recent[recent.length - 1][0] - recent[0][0] >= 10 * 60 * 1000) {
+    const [t0, p0] = recent[0], [t1, p1] = recent[recent.length - 1];
+    rate = Math.max(0, (p1 - p0) / ((t1 - t0) / 36e5)); // % per hour
+    const resetT = it.resetsAt ? Date.parse(it.resetsAt) : null;
+    if (rate < 0.5) verdict = 'idle';
+    else {
+      eta = now + ((100 - it.pct) / rate) * 36e5;
+      verdict = resetT && eta < resetT ? 'runout' : 'safe';
+    }
+  }
+  return { rate, eta, verdict, spark: history.samples.slice(),
+    start: it.resetsAt ? Date.parse(it.resetsAt) - 5 * 36e5 : null, end: it.resetsAt ? Date.parse(it.resetsAt) : null };
+}
+
+let prevSession = null;
+function notifyReset(it) {
+  if (!it) return;
+  if (prevSession && prevSession.resetsAt && it.resetsAt !== prevSession.resetsAt && prevSession.pct >= 50 && it.pct < prevSession.pct
+      && settings.notify && Notification.isSupported()) {
+    new Notification({ title: 'เซสชัน Claude รีเซ็ตแล้ว 🎉', body: 'โควตา 5 ชั่วโมงกลับมาเต็มแล้ว ใช้ต่อได้เลย',
+      icon: path.join(__dirname, '..', 'build', 'icon.png') }).show();
+  }
+  prevSession = { resetsAt: it.resetsAt, pct: it.pct };
+}
+
 function maybeNotify(items) {
   if (!settings.notify || !Notification.isSupported()) return;
   for (const it of items) {
@@ -365,7 +423,10 @@ async function refresh() {
     const usage = await apiGet(`/api/organizations/${orgId}/usage`);
     const items = normalize(usage);
     const org = orgs.find(o => o.uuid === orgId);
-    send({ state: 'ok', items, products: lastProducts, org: orgLabel(org), updatedAt: Date.now() });
+    const sess = items.find(i => i.key === 'five_hour');
+    const burn = recordSession(sess);
+    notifyReset(sess);
+    send({ state: 'ok', items, burn, products: lastProducts, org: orgLabel(org), updatedAt: Date.now() });
     refreshProducts(); // "This week's usage by product" — throttled, arrives a moment later
     maybeNotify(items);
     const five = items.find(i => i.key === 'five_hour');
@@ -494,6 +555,16 @@ ipcMain.on('set-glass', (_e, g) => {
   if (windowMaterial() !== currentMaterial) setTimeout(relaunch, 350);
 });
 ipcMain.on('refresh', () => { productsAt = 0; refresh(); });
+ipcMain.on('set-pref', (_e, p) => {
+  if (p && typeof p.collapsed === 'boolean') settings.collapsed = p.collapsed;
+  saveSettings();
+});
+// the renderer draws a little % ring for the tray icon
+ipcMain.on('tray-icon', (_e, dataUrl) => {
+  if (!tray || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png')) return;
+  const img = nativeImage.createFromDataURL(dataUrl);
+  if (!img.isEmpty()) tray.setImage(img.resize({ width: 16, height: 16, quality: 'best' }));
+});
 ipcMain.on('login', () => openLogin());
 ipcMain.handle('set-session-key', (_e, k) => setSessionKey(k));
 ipcMain.on('hide', () => win && win.hide());
@@ -501,7 +572,7 @@ ipcMain.on('menu', () => tray && tray.popUpContextMenu());
 ipcMain.on('open-usage', () => shell.openExternal(`${BASE}/settings/usage`));
 ipcMain.on('resize', (_e, h) => {
   if (!win) return;
-  const b = win.getBounds(); const nh = Math.round(Math.max(120, Math.min(700, h)));
+  const b = win.getBounds(); const nh = Math.round(Math.max(100, Math.min(900, h * settings.scale)));
   if (Math.abs(b.height - nh) > 1) {
     // grow upward if near screen bottom so it stays anchored
     const wa = screen.getDisplayMatching(b).workArea;
@@ -513,6 +584,7 @@ ipcMain.on('resize', (_e, h) => {
 // ---------- boot ----------
 app.whenReady().then(() => {
   loadSettings();
+  loadHistory();
   claudeSession().setUserAgent(CHROME_UA);
   app.userAgentFallback = CHROME_UA;
   createWidget();
@@ -522,7 +594,9 @@ app.whenReady().then(() => {
   // refresh when waking from sleep / display changes
   require('electron').powerMonitor.on('resume', () => setTimeout(refresh, 4000));
   nativeTheme.on('updated', () => win && win.webContents.send('theme'));
+  try { globalShortcut.register('CommandOrControl+Alt+C', toggleWidget); } catch {}
 });
+app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch {} });
 app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
 app.on('window-all-closed', (e) => e.preventDefault());
 app.on('before-quit', () => { quitting = true; });

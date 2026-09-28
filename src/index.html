@@ -14,6 +14,9 @@
         <stop offset="0" stop-color="#ff4d6d"/><stop offset=".35" stop-color="#ffb84d"/>
         <stop offset=".65" stop-color="#4dd8ff"/><stop offset="1" stop-color="#d46dff"/>
       </linearGradient>
+      <linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7fb2ff" stop-opacity=".45"/><stop offset="1" stop-color="#7fb2ff" stop-opacity="0"/>
+      </linearGradient>
       <path id="wavepath" d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 V 20 H 0 Z"/>
     </defs>
   </svg>
@@ -52,8 +55,17 @@
     <!-- usage view -->
     <section id="view-usage" class="view">
       <div class="orbs" id="orbs"></div>
-      <div class="rows" id="rows"></div>
-      <div class="products" id="products" hidden></div>
+      <button class="chev" id="btn-chev" type="button" aria-expanded="true" title="ย่อ / ขยายรายละเอียด">
+        <span class="chev-mini" id="chev-mini"></span>
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="details" id="details">
+        <div class="details-inner">
+          <div class="burn" id="burn" hidden></div>
+          <div class="rows" id="rows"></div>
+          <div class="products" id="products" hidden></div>
+        </div>
+      </div>
     </section>
 
     <!-- colour panel -->

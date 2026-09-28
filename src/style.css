@@ -417,7 +417,54 @@ html[data-glass="none"] .foot { border-top-color: rgba(255,255,255,.18); }
 /* nothing behind the text, so always use light text with a dark halo — readable on any wallpaper */
 html[data-glass="none"] { --ink: #fff; --ink-2: rgba(255,255,255,.88); --ink-3: rgba(255,255,255,.72); --shadow-ink: rgba(0,0,0,.45);
   --btn: rgba(255,255,255,.12); --btn-hover: rgba(255,255,255,.26); --well: rgba(255,255,255,.10); --well-edge: rgba(255,255,255,.4); --well-shade: rgba(0,0,0,.25); }
-html[data-glass="none"] :is(.titles, .glabel, .row, .prow, .products .ph, .foot, .colorp, .auth) {
+html[data-glass="none"] :is(.titles, .glabel, .row, .prow, .products .ph, .foot, .colorp, .auth, .burn, .chev) {
   text-shadow: 0 1px 2px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.35); }
 
 .seg { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+
+/* ---------------- collapse / expand ---------------- */
+.chev { -webkit-app-region: no-drag; display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; height: 22px; margin-top: 8px; border-radius: 999px; color: var(--ink-3); font-size: 11px;
+  transition: background .2s, color .2s; }
+.chev:hover { background: var(--btn); color: var(--ink); }
+.chev svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .35s cubic-bezier(.16,1,.3,1); transform: rotate(180deg); }
+.chev[aria-expanded="false"] svg { transform: rotate(0deg); }
+.chev-mini { display: none; font-variant-numeric: tabular-nums; }
+.chev[aria-expanded="false"] .chev-mini { display: inline; }
+.details { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .35s cubic-bezier(.2,.8,.2,1), opacity .25s; }
+.details > .details-inner { min-height: 0; overflow: hidden; }
+.details.closed { grid-template-rows: 0fr; opacity: 0; }
+html.collapsed .foot { display: none; }
+html.collapsed .chev { margin-top: 6px; }
+html.collapsed .glass { padding-bottom: 8px; }
+
+/* ---------------- locked position ---------------- */
+html[data-locked="1"] .glass { -webkit-app-region: no-drag; }
+
+/* ---------------- burn rate + sparkline ---------------- */
+.burn { margin-top: 12px; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: end; }
+.burn .bh { font-size: 12px; font-weight: 600; }
+.burn .bv { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.burn .bv.runout { color: #ff6b7d; font-weight: 600; }
+.burn .bv.safe { color: #3fd07a; }
+.burn svg.spark { grid-column: 1 / -1; width: 100%; height: 30px; overflow: visible; }
+.spark .area { fill: url(#sparkfill); }
+.spark .line { fill: none; stroke: var(--u2, #3a7bff); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.spark .proj { fill: none; stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.spark .cap { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
+.spark .now { fill: var(--u2, #3a7bff); stroke: #fff; stroke-width: 1.2; }
+.burn .bf { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-3); margin-top: -2px; }
+
+/* ---------------- hot orb breathes red ---------------- */
+.orb[data-level="hot"] { animation: hotglow 2.4s ease-in-out infinite; }
+@keyframes hotglow {
+  50% { box-shadow: inset 0 2px 1px var(--well-edge), inset 0 -3px 8px var(--well-shade), 0 0 0 3px rgba(255,59,92,.25), 0 0 26px 2px rgba(255,59,92,.45); }
+}
+.burn .bv.runout, .burn .bv.safe { padding: 1px 8px; border-radius: 999px; }
+.burn .bv.runout { background: rgba(255,59,92,.2); color: #ffd0d6; box-shadow: inset 0 0 0 1px rgba(255,59,92,.45); }
+.burn .bv.safe { background: rgba(63,208,122,.18); color: #c9f5da; box-shadow: inset 0 0 0 1px rgba(63,208,122,.4); }
+@media (prefers-color-scheme: light) {
+  html:not([data-glass="none"]) .burn .bv.runout { color: #b3123a; }
+  html:not([data-glass="none"]) .burn .bv.safe { color: #137a3e; }
+}
