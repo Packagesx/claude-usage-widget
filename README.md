@@ -1,32 +1,30 @@
 # Claude Usage Widget
 
-A small **Liquid Glass** desktop widget for **Windows** that shows your **claude.ai plan usage**: the 5-hour session limit, the weekly limit, and per-model weekly limits when your plan has them. It shows how much of each you've used and when each one resets.
+A small **Liquid Glass** desktop widget for **Windows** that keeps your **claude.ai plan usage** in view. It shows the 5-hour session, the weekly limit, per-model limits, cloud credits and usage by product, each with a live countdown to its reset.
 
-วิดเจ็ตหน้าจอสำหรับ Windows ธีม Liquid Glass แสดง % การใช้งานแพลน claude.ai (เซสชัน 5 ชม. / รายสัปดาห์) พร้อมเวลารีเซ็ต
+วิดเจ็ตหน้าจอ Windows ธีม Liquid Glass แสดงการใช้งานแพลน claude.ai แบบเรียลไทม์: เซสชัน 5 ชม., รายสัปดาห์, แยกตามโมเดล, เครดิต และแยกตามผลิตภัณฑ์ พร้อมนับถอยหลังเวลารีเซ็ต
 
-![Claude Usage Widget 2.0](docs/v2.png)
+![Claude Usage Widget — dark and light](docs/hero.png)
 
-> ⚠️ **Unofficial.** This project is not affiliated with or endorsed by Anthropic. It reads the same usage data that claude.ai shows on its own settings page, through an undocumented endpoint. That endpoint may change at any time, and if it does, the widget can stop working.
+> ⚠️ **Unofficial.** This project is not affiliated with or endorsed by Anthropic. It reads the same data claude.ai shows on its own usage page, through an undocumented endpoint that may change at any time. If it does change, the widget can stop working until it is updated.
 
 ---
 
-## Smooth folding (2.4)
+## Contents
 
-When you collapse or expand the widget, the window resize itself is the animation. The panel is already laid out in its final form, and the window grows to reveal it or shrinks to clip it, anchored to the nearest screen edge. The window moves along a time-based ease curve, so late timer ticks never make it stutter. Sliding into and out of a screen edge uses the same smooth motion.
+- [Download](#download--ดาวน์โหลด)
+- [Sign in](#sign-in--การเข้าสู่ระบบ)
+- [What it shows](#what-it-shows--แสดงอะไรบ้าง)
+- [Colours: liquid & glass](#colours-liquid--glass--ปรับสี)
+- [Staying out of your way](#staying-out-of-your-way--ไม่เกะกะ)
+- [Pixel cats](#pixel-cats--น้องแมว)
+- [Little extras](#little-extras--ลูกเล่นเล็กๆ)
+- [Tray menu & shortcuts](#tray-menu--shortcuts)
+- [Performance](#performance)
+- [Build from source](#build-from-source)
+- [How it works & privacy](#how-it-works--privacy)
 
-## Performance (2.3)
-
-All ambient animations are compositor-only, so they don't repaint. In testing, idle repaints fell from about 360/s to almost 0, and main-thread time fell from about 6.5% to 0.1%. **Reduce animations** in the tray stops the waves and glow completely.
-
-## What's new in 2.0
-
-- **Monochrome by default.** Rings and liquid are white/grey (following light/dark mode) while usage is under 50%. They turn yellow → orange → red only as you approach a limit.
-- **Soft breathing alert.** Above 80% the frame glows slowly amber (red above 90%). There is no blinking and no pop-ups.
-- **Magnetic snap.** When you drop the widget near a screen edge, it snaps to that edge.
-- **Hide in the edge (optional).** A widget snapped to the left or right edge slides away when you're not using it, leaving a thin handle. It slides back out when your mouse touches the handle.
-- **Ghost mode.** The widget becomes click-through, so you can click whatever is behind it. Hold **Ctrl** to use the widget normally while in ghost mode. Toggle ghost mode with `Ctrl+Alt+G`.
-- **Adaptive opacity.** When the mouse is far away, the widget fades to 20/30/50% (your choice) and comes back instantly as the cursor approaches. Animations pause while it's faded or hidden to save battery.
-- **Smooth values.** Numbers and rings glide to each new value using requestAnimationFrame interpolation, instead of jumping on every refresh.
+---
 
 ## Download / ดาวน์โหลด
 
@@ -37,61 +35,166 @@ Get the latest build from **[Releases](../../releases/latest)**:
 | `ClaudeUsageWidget-Setup-x.y.z.exe` | Installer. Adds Start Menu and Desktop shortcuts. |
 | `ClaudeUsageWidget-Portable-x.y.z.exe` | Portable build. Runs without installing. |
 
-The builds are not code-signed, so Windows SmartScreen may show a warning. To continue, click **More info → Run anyway**.
-
+The builds are not code-signed, so Windows SmartScreen may warn you. Click **More info → Run anyway** to continue.
 ไฟล์ยังไม่ได้เซ็นลายเซ็นดิจิทัล ถ้า SmartScreen เตือนให้กด **More info → Run anyway**
 
-## Requirements
+**Requirements**
 
-- Windows 10 or 11 (64-bit)
+- Windows 10 or 11, 64-bit
 - A claude.ai account on a Pro, Max, Team or Enterprise plan
-- For the blurred **Acrylic** glass effect: Windows 11 22H2 or later. On older systems, choose **Clear Glass** from the tray menu.
+- Windows 11 22H2 or later for the blurred **Frosted** glass. On older versions, choose **Clear** glass instead.
 
 ## Sign in / การเข้าสู่ระบบ
 
-1. Click **ล็อกอินด้วยอีเมล** (Sign in with email). Enter your email and complete the claude.ai sign-in with the code or link it sends you.
-   - Google blocks sign-in inside embedded app windows, so the Google button will not work here. If your account uses Google sign-in, enter the same email address instead; this works.
-   - If claude.ai emails you a link, right-click it, choose **Copy link**, and paste it into the box shown at the bottom of the sign-in window.
-2. **Alternative:** Sign in to claude.ai in your normal browser. Then open DevTools (F12) → **Application** → **Cookies** → `https://claude.ai`, copy the value of `sessionKey`, and click **วางจากคลิปบอร์ด** (Paste from clipboard) in the widget.
+1. Click **ล็อกอินด้วยอีเมล** (Sign in with email), then finish the claude.ai sign-in with the code or link it emails you.
+   - Google blocks sign-in inside embedded app windows. If your account normally uses Google, enter the same email address instead; that works.
+   - If claude.ai sends you a link, right-click it, choose **Copy link**, and paste it into the box at the bottom of the sign-in window.
+2. **Alternative:**
+   1. Sign in to claude.ai in your normal browser.
+   2. Open DevTools (F12) → **Application** → **Cookies** → `https://claude.ai`.
+   3. Copy the value of `sessionKey`.
+   4. Click **วางจากคลิปบอร์ด** (Paste from clipboard) in the widget.
 
-Your session is stored **only on your PC**, in the app's own browser profile. It is never sent anywhere except `claude.ai`.
+Your session stays **only on your PC**, in the app's own browser profile.
 
-## Features
+---
 
-- Liquid-glass orbs whose fill level shows usage. The colour changes from blue to amber to red as you get close to a limit.
-- A countdown to each reset, in Thai.
-- **This week's usage by product** (Claude Code / Chats / Cowork / Other), read from your claude.ai usage page. It refreshes every 10 minutes, or right away when you press refresh.
-- Per-model weekly limits (Opus, Sonnet) appear when claude.ai reports them for your plan.
-- Claude Code cloud-session credits (the `iguana_necktie` field in the API) are shown as dollars remaining, with the expiry date.
-- Limits that claude.ai returns under unannounced internal codenames (e.g. `nimbus_quill`) are not shown.
-- Tray menu with these settings:
-  - Always on top
-  - Start with Windows
-  - Refresh interval (1, 2, 5 or 10 min)
-  - Notifications at 80% and 95%
-  - Glass material: Acrylic, Mica or Clear
-  - Font: Anuphan, IBM Plex Sans Thai, Prompt or Noto Sans Thai, all bundled with the app
-  - Organization switcher, if you belong to more than one
-- Colours are customisable from the droplet button, with separate settings for the **liquid** and the **glass**:
-  - Liquid: **By level** (blue → amber → red, the default), **Single colour** (7 presets or any custom colour), or **RGB** (a rainbow cycle)
-  - Glass: **Clear** (truly clear, with no tint and no blur; only the rim and highlights remain), **Frosted** (blurred Acrylic, the default), **Tinted** (a Liquid Glass-style colour tint with adjustable strength), or **RGB** (a soft, blurred rainbow light moving inside the glass)
-  - An optional red warning above 90% usage
-- **Collapse** the details with the arrow under the orbs. Collapsed, the widget is just the two orbs; the arrow shows your remaining cloud credit.
-- **Session pace**: a sparkline of the current 5-hour window and your burn rate (%/hour). It also tells you whether you'll hit the limit before the reset (e.g. "expected full at 15:07").
-- **Pixel cats 🐾** that wander along the bottom of the glass. There are six of them: a walker, a sitter that hops around, a yarn player, a reader, a sleeper with little *z*s, and a fish-chasing sprinter. Click one and it meows. You can also add your own pet from any transparent PNG/GIF/WEBP. The cats are built to be light: there is no per-frame JavaScript, since each cat decides what to do on a timer every few seconds, and all motion is compositor-only CSS transforms. They are fully paused while the widget is a pill, faded, or hidden. In testing, six cats added about 1% main-thread time.
-- **Header icon**: the box, a sparkle, or any image you pick (PNG/JPG/SVG/ICO, up to 2 MB), set from the tray.
-- **Widget size**: 75% / 85% / 100% / 115%, set from the tray.
-- **Tray icon** shows your session % as a small coloured ring.
-- **Global shortcut** `Ctrl+Alt+C` shows or hides the widget.
-- **Lock position**, so the widget can't be dragged by accident.
-- A notification when your 5-hour session resets, plus a red pulse on an orb that is above 90%.
-- Click a liquid orb to make it slosh, bubble and splash. Poke it a few times fast and see what happens.
-- Follows the Windows light/dark theme.
-- Remembers where you placed it on screen.
+## What it shows / แสดงอะไรบ้าง
 
-![Colour modes](docs/colors.png)
+| | |
+|---|---|
+| **Session (5 h)** | Liquid orb showing the 5-hour session %, with a countdown to its reset |
+| **Weekly** | Liquid orb showing the 7-day limit %, with its reset day and time |
+| **Per-model weekly** | Opus and Sonnet weekly limits, when claude.ai reports them for your plan |
+| **Cloud credits** | Claude Code cloud-session credit (`iguana_necktie` in the API), shown as dollars left with the expiry date |
+| **Usage by product** | This week's split across Claude Code, Chats, Cowork and Other, read from your claude.ai usage page |
+| **Session pace** | A sparkline of the current 5-hour window, your burn rate (%/h), and a forecast such as *"expected full at 15:07"* |
 
-![Fonts](docs/fonts.png)
+Limits that claude.ai returns under internal codenames that haven't been announced (e.g. `nimbus_quill`) are hidden.
+
+**Collapse / expand.** Click the arrow under the orbs to show or hide the details. The window itself grows and shrinks on a time-based ease curve. It stays anchored to the corner you placed it in, so it never jumps, even when it sits against a screen edge.
+
+![Collapsed and expanded](docs/collapse.png)
+
+**Soft alert.** Above 80% the glass frame breathes slowly in amber, and turns red above 90%. There is no blinking and no pop-ups. You can also get Windows notifications at 80% and 95%, and when your session resets.
+
+![Soft alert](docs/alert.png)
+
+---
+
+## Colours: liquid & glass / ปรับสี
+
+The droplet button in the header opens a colour panel. It has two separate tabs, one for the **liquid** and one for the **glass**.
+
+**Liquid**
+
+![Liquid modes](docs/liquid-modes.png)
+
+- **Mono** (default): white or grey to match light/dark mode. It turns yellow → orange → red only as you approach a limit.
+- **By level**: blue → amber → red.
+- **Single colour**: 7 presets or any custom colour.
+- **RGB**: a slow rainbow cycle, with adjustable speed.
+
+**Glass**
+
+![Glass modes](docs/glass-modes.png)
+
+- **Clear**: truly clear, with no tint and no blur. Only the rim and highlights remain.
+- **Frosted** (default): Windows Acrylic blur.
+- **Tinted**: a Liquid Glass-style colour tint with adjustable strength.
+- **RGB**: a soft, blurred rainbow light moving *inside* the glass.
+
+![Colour panel](docs/color-panel.png)
+
+---
+
+## Staying out of your way / ไม่เกะกะ
+
+- **Magnetic snap:** drop the widget near a screen edge and it snaps to that edge.
+- **Hide in the edge** (optional): when snapped to the left or right edge, it slides away while you're not using it and leaves a thin handle. Touch the handle and it slides back.
+- **Ghost mode** (`Ctrl+Alt+G`): the widget becomes click-through, so you can work on whatever is behind it. Hold **Ctrl** to use the widget normally while in ghost mode.
+- **Adaptive opacity:** when your mouse is far away, the widget fades to 20%, 30% or 50%, and it comes back as soon as the cursor gets close.
+- **Lock position:** prevents accidental dragging.
+- **Size:** 75% / 85% / 100% / 115%.
+- **Always on top** and **Start with Windows**.
+
+---
+
+## Pixel cats / น้องแมว 🐾
+
+![Pixel cats](docs/pets.png)
+
+Up to six pixel cats can wander along the bottom of the glass:
+
+- a walker
+- a sitter that hops around
+- a calico
+- a reader
+- a sleeper with little *z*s
+- a fish-chasing sprinter
+
+Click one and it meows. You can add **your own pet** from any transparent PNG, GIF or WEBP (tray → น้องแมว → เพิ่มน้องจากรูปเอง…).
+
+The cats are built to be cheap. There is no per-frame JavaScript: each cat picks its next move on a timer every few seconds, and all motion is compositor-only CSS transforms. They pause completely while the widget is faded or hidden.
+
+---
+
+## Little extras / ลูกเล่นเล็กๆ
+
+![Poke and ghost mode](docs/extras.png)
+
+- **Poke the liquid:** click an orb and it sloshes, bubbles and splashes. Poke it a few times fast and see what happens.
+- **Smooth values:** numbers and rings glide to each new value instead of jumping on refresh.
+- **Tray ring:** the tray icon shows your session % as a small coloured ring.
+- **Header icon:** the box, a sparkle, or any image you pick (PNG/JPG/SVG/ICO, up to 2 MB).
+- **Fonts:** Anuphan, IBM Plex Sans Thai, Prompt and Noto Sans Thai, all bundled with the app.
+- **Light/dark:** follows the Windows theme.
+- **Multiple organizations:** switch between them from the tray.
+
+---
+
+## Tray menu & shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Alt+C` | Show / hide the widget |
+| `Ctrl+Alt+G` | Toggle ghost mode |
+| Hold `Ctrl` | Interact with the widget while in ghost mode |
+
+The tray menu has these settings:
+
+- Refresh now, and refresh interval (1 / 2 / 5 / 10 min)
+- Collapse / expand
+- Snap to edges
+- Hide in the edge
+- Ghost mode
+- Fade when the mouse is far away
+- Lock position
+- Size
+- Always on top
+- Start with Windows
+- Notifications
+- Glass material
+- Liquid colour
+- Font
+- Header icon
+- Cats
+- Organization
+- Reduce animations
+- Reset position
+- Open claude.ai usage page
+- Sign out
+
+---
+
+## Performance
+
+- **Compositor-only animation.** Every ambient animation uses only `transform` and `opacity`, so it never repaints. In testing, idle repaints dropped from about 360/s to almost 0, and main-thread time from about 6.5% to about 0.1%.
+- **Pause when not visible.** Animations stop while the widget is faded, hidden or in the edge.
+- **Reduce animations** (tray) stops the waves and glow completely, for the lowest CPU and GPU use.
+- **Light network use.** The per-product page is read at most every 10 minutes.
+
+---
 
 ## Build from source
 
@@ -101,21 +204,31 @@ npm start          # run in development
 npm run dist       # build installer + portable exe into dist/
 ```
 
-Pushing a tag like `v1.2.0` makes GitHub Actions (`.github/workflows/release.yml`) build both `.exe` files on Windows and attach them to a new Release.
+Pushing a tag like `v2.4.1` makes GitHub Actions (`.github/workflows/release.yml`) build both `.exe` files on Windows and attach them to a new Release.
 
-## How it works
+```
+src/
+  main.js        Electron main: window, tray, data fetch, snap/edge/ghost, animation
+  preload.js     safe bridge (window.widget)
+  index.html     widget markup
+  style.css      Liquid Glass styles
+  renderer.js    rendering, colour panel, collapse, poke gimmick
+  pets.js        pixel cat engine
+  cats/          cat sprites
+  fonts/         bundled Thai fonts (OFL)
+```
 
-- Built with Electron. The widget window is frameless and uses Windows 11's `backgroundMaterial` (Acrylic or Mica) for the real desktop blur. CSS then adds the tint, rim light, specular sheen and the liquid gauges.
-- Usage data is fetched from inside a hidden `claude.ai` page that uses your signed-in session:
+## How it works & privacy
+
+- Built with **Electron**. The window is frameless and uses Windows 11's `backgroundMaterial` for the real desktop blur. CSS adds the tint, rim light, highlights and the liquid gauges.
+- Usage data comes from a hidden `claude.ai` page that uses your signed-in session:
   - `GET /api/organizations`
   - `GET /api/organizations/{id}/usage`
-- The per-product breakdown has no API. The widget loads `claude.ai/settings/usage` in a hidden window (at most every 10 minutes) and reads the "usage by product" section from the page.
-- Only known limit types are shown. Internal codename fields are ignored.
+- The per-product breakdown has no API. The widget reads the "usage by product" section from `claude.ai/settings/usage` in a hidden window.
+- Nothing is sent anywhere except `claude.ai`. Settings and session history are stored locally in your user profile.
 
-## Fonts
+## Credits & licence
 
-The bundled fonts are Anuphan, IBM Plex Sans Thai, Prompt and Noto Sans Thai, taken from [Fontsource](https://fontsource.org). All four are licensed under the SIL Open Font License 1.1.
-
-## License
-
-MIT © Pack
+- Code: **MIT** © Pack
+- Fonts: Anuphan, IBM Plex Sans Thai, Prompt and Noto Sans Thai, via [Fontsource](https://fontsource.org), under the SIL Open Font License 1.1 (licence files are in `src/fonts/`).
+- "Claude" is a trademark of Anthropic. This project only displays your own account data and is not an Anthropic product.

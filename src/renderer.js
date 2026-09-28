@@ -17,8 +17,8 @@
           return { rate: 18, eta: now + (58 / 18) * h * (params.get('burn') === 'safe' ? 1 : 0.55), verdict: params.get('burn') || 'runout', spark: pts, start, end: now + 2.3 * h }; })(),
         products: { title: 'This week’s usage by product', rows: [{ name: 'Claude Code', pct: 12 }, { name: 'Chats', pct: 23 }, { name: 'Cowork', pct: 65 }, { name: 'Other', pct: 0 }] },
         items: [
-        { key: 'five_hour', th: 'เซสชันนี้', sub: 'รอบ 5 ชั่วโมง', pct: 42, resetsAt: new Date(now + 2.3 * h).toISOString() },
-        { key: 'seven_day', th: 'สัปดาห์นี้', sub: 'ทุกโมเดล', pct: 83, resetsAt: new Date(now + 76 * h).toISOString() },
+        { key: 'five_hour', th: 'เซสชันนี้', sub: 'รอบ 5 ชั่วโมง', pct: Number(params.get('s') || 42), resetsAt: new Date(now + 2.3 * h).toISOString() },
+        { key: 'seven_day', th: 'สัปดาห์นี้', sub: 'ทุกโมเดล', pct: Number(params.get('w') || 83), resetsAt: new Date(now + 76 * h).toISOString() },
         { key: 'iguana_necktie', kind: 'credit', th: 'เครดิต Cloud', sub: 'Claude Code บนคลาวด์', pct: 33, limit: 100, used: 33, left: 67, resetsAt: new Date(now + 38 * 24 * h).toISOString() },
       ] },
       auth: { state: 'auth' },
