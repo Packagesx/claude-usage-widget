@@ -419,7 +419,7 @@
   }
 
   // ---- progressive disclosure: pill ⇄ full panel on hover ----
-  var layout = params.get('layout') || 'full', expanded = false, hasData = false, authState = false;
+  var layout = 'full', expanded = false, hasData = false, authState = false;
   var ghost = params.get('ghost') === '1', lastHover = false, enterT = 0, leaveT = 0;
   const isBusy = () => panelOpen || authState || !$('#key-form').hidden || (document.activeElement && document.activeElement.tagName === 'INPUT');
   function applyLayout() {
@@ -446,13 +446,27 @@
     if (v) enterT = setTimeout(expand, 120); else leaveT = setTimeout(collapse, 450);
   }
   api.onHover && api.onHover(onHover);
-  api.onLayout && api.onLayout((v) => { layout = v; expanded = false; applyLayout(); });
+
   const setGhost = (v) => { ghost = v; root.dataset.ghost = v ? '1' : ''; if (v) { expanded = false; applyLayout(); } };
   setGhost(ghost);
   api.onGhost && api.onGhost(setGhost);
   api.onDock && api.onDock((d) => { root.dataset.dock = d.hidden ? d.side : ''; if (d.hidden) { expanded = false; applyLayout(); } });
   api.onAnchor && api.onAnchor((a) => { root.dataset.ax = a.right ? 'r' : 'l'; root.dataset.ay = a.bottom ? 'b' : 't'; });
   api.onPaused && api.onPaused((v) => root.classList.toggle('paused', v));
+  // low effects
+  root.classList.toggle('lowfx', params.get('lowfx') === '1');
+  api.onLowfx && api.onLowfx((v) => root.classList.toggle('lowfx', v));
+  // ghost mode: mouse events are forwarded while click-through, so we can see Ctrl being held
+  let ghostWant = false;
+  const ghostMove = (e) => {
+    if (!ghost) return;
+    const want = e.ctrlKey || e.metaKey;
+    if (want !== ghostWant) { ghostWant = want; api.setGhostInteractive && api.setGhostInteractive(want); }
+  };
+  document.addEventListener('mousemove', ghostMove, { passive: true });
+  document.addEventListener('keyup', (e) => { if (ghost && (e.key === 'Control' || e.key === 'Meta')) { ghostWant = false; api.setGhostInteractive && api.setGhostInteractive(false); } });
+  document.addEventListener('mouseleave', () => { if (ghostWant) { ghostWant = false; api.setGhostInteractive && api.setGhostInteractive(false); } });
+  api.onGhostInteractive && api.onGhostInteractive((v) => root.classList.toggle('interactive', v));
   // leaving a busy state (colour panel, login) should let the pill come back
   document.addEventListener('focusout', () => setTimeout(() => { if (!lastHover) collapse(); applyLayout(); }, 50));
   if (params.get('expanded')) { expanded = true; }

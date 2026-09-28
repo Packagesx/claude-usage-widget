@@ -27,6 +27,7 @@ const DEFAULTS = {
   scale: 1,                   // widget size: 0.75 | 0.85 | 1 | 1.15
   collapsed: false,           // hide the details below the orbs
   locked: false,              // lock position (no dragging)
+  lowfx: false,               // reduce ambient animation
   icon: 'box',                // header icon: box | spark | custom
   pets: ['orange', 'sleepy'], // pixel cats walking in the glass (ids of built-ins or custom-*)
   customPets: [],             // [{ id, mime }] images the user added
@@ -105,7 +106,7 @@ function createWidget() {
   }
 
   win = new BrowserWindow(opts);
-  win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font, collapsed: settings.collapsed ? '1' : '', locked: settings.locked ? '1' : '', layout: settings.layout, ghost: settings.ghost ? '1' : '' } });
+  win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font, collapsed: settings.collapsed ? '1' : '', locked: settings.locked ? '1' : '', layout: 'full', ghost: settings.ghost ? '1' : '', lowfx: settings.lowfx ? '1' : '' } });
   win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(settings.scale));
   win.once('ready-to-show', () => { win.showInactive(); if (settings.ghost) win.setIgnoreMouseEvents(true, { forward: true }); });
   win.on('moved', () => { if (!dock.hidden && !sliding) { snapToEdges(); settings.bounds = win.getBounds(); saveSettings(); } });
@@ -153,9 +154,8 @@ function buildTrayMenu() {
     { label: 'ย่อ / ขยายรายละเอียด', click: () => win && win.webContents.send('toggle-collapse') },
     { label: 'ล็อกตำแหน่ง (ลากไม่ได้)', type: 'checkbox', checked: settings.locked,
       click: (i) => { settings.locked = i.checked; saveSettings(); win && win.webContents.send('locked', i.checked); } },
-    { label: 'รูปแบบ', submenu: [['compact', 'กะทัดรัด — ชี้เมาส์แล้วค่อยกางออก'], ['full', 'เต็ม — แสดงแผงตลอด']].map(([v, label]) => ({
-      label, type: 'radio', checked: settings.layout === v,
-      click: () => { settings.layout = v; saveSettings(); win && win.webContents.send('layout', v); buildTrayMenu(); } })) },
+    { label: 'ลดแอนิเมชัน (ประหยัดเครื่อง)', type: 'checkbox', checked: settings.lowfx,
+      click: (i) => { settings.lowfx = i.checked; saveSettings(); win && win.webContents.send('lowfx', i.checked); } },
     { label: 'ดูดติดขอบจอ', type: 'checkbox', checked: settings.snap,
       click: (i) => { settings.snap = i.checked; saveSettings(); snapToEdges(); } },
     { label: 'แอบชิดขอบเมื่อไม่ใช้ (ต้องติดขอบซ้าย/ขวา)', type: 'checkbox', checked: settings.edgeHide,
@@ -754,13 +754,13 @@ function showFromEdge() {
   slideTo(dock.shown);
 }
 
-let opacity = 1, awaySince = Date.now(), insideSince = 0, wasInside = false;
+let lastPaused = false, opacity = 1, awaySince = Date.now(), insideSince = 0, wasInside = false;
 function watchCursor() {
   if (!win || win.isDestroyed() || !win.isVisible() || sliding) return;
   const c = screen.getCursorScreenPoint(), b = win.getBounds(), now = Date.now();
   const within = (m) => c.x >= b.x - m && c.x < b.x + b.width + m && c.y >= b.y - m && c.y < b.y + b.height + m;
   const inside = within(0), near = within(70);
-  if (inside !== wasInside) { wasInside = inside; win.webContents.send('hover', inside); }
+  if (inside !== wasInside) { wasInside = inside; win.webContents.send('hover', inside); if (!inside) setGhostInteractive(false); }
   if (near) awaySince = now;
 
   // edge hiding
@@ -770,18 +770,28 @@ function watchCursor() {
   }
   // adaptive opacity (ghost mode: see through it while the cursor is over it)
   let target = 1;
-  if (settings.ghost && inside) target = 0.35;
+  if (settings.ghost && inside) target = ghostInteractive ? 1 : 0.5;
   else if (settings.fade < 1 && !near && !uiState.busy && !dock.hidden && now - awaySince > 2500) target = settings.fade;
   const step = target > opacity ? 0.34 : 0.06; // come back fast, fade out slowly
   const next = Math.abs(target - opacity) <= step ? target : opacity + Math.sign(target - opacity) * step;
   if (next !== opacity) {
     opacity = next; win.setOpacity(opacity);
-    win.webContents.send('paused', opacity < 0.6 || dock.hidden);
+    const p = opacity < 0.6 || dock.hidden;
+    if (p !== lastPaused) { lastPaused = p; win.webContents.send('paused', p); }
   }
 }
 setInterval(watchCursor, 100);
 
+let ghostInteractive = false;
+function setGhostInteractive(v) {
+  if (!win || !settings.ghost || v === ghostInteractive) return;
+  ghostInteractive = v;
+  win.setIgnoreMouseEvents(!v, { forward: true });
+  win.webContents.send('ghost-interactive', v);
+}
+ipcMain.on('ghost-interactive', (_e, v) => setGhostInteractive(!!v));
 function setGhost(v) {
+  ghostInteractive = false;
   settings.ghost = v; saveSettings();
   if (win) { win.setIgnoreMouseEvents(v, { forward: true }); win.webContents.send('ghost', v); }
   buildTrayMenu();
