@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:">
+<title>Claude Usage</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <path id="wavepath" d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 V 20 H 0 Z"/>
+    </defs>
+  </svg>
+
+  <main class="glass" id="glass">
+    <div class="edge" aria-hidden="true"></div>
+    <div class="specular" aria-hidden="true"></div>
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+    <header class="bar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2.5c.6 4.7 2.8 6.9 9.5 9.5-6.7 2.6-8.9 4.8-9.5 9.5-.6-4.7-2.8-6.9-9.5-9.5 6.7-2.6 8.9-4.8 9.5-9.5z"/></svg>
+        </span>
+        <div class="titles">
+          <strong>Claude Usage</strong>
+          <small id="org">—</small>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="icon" id="btn-refresh" title="รีเฟรช" aria-label="รีเฟรช">
+          <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+        </button>
+        <button class="icon" id="btn-menu" title="ตั้งค่า" aria-label="ตั้งค่า">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
+        </button>
+        <button class="icon" id="btn-hide" title="ซ่อน (เปิดได้จาก tray)" aria-label="ซ่อน">
+          <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- usage view -->
+    <section id="view-usage" class="view">
+      <div class="orbs" id="orbs"></div>
+      <div class="rows" id="rows"></div>
+    </section>
+
+    <!-- auth view -->
+    <section id="view-auth" class="view auth" hidden>
+      <div class="auth-orb" aria-hidden="true"><span></span></div>
+      <h2>เชื่อมบัญชี claude.ai</h2>
+      <p>ล็อกอินด้วย <b>อีเมล</b> (ใช้อีเมลเดียวกับ Google ได้) — ปุ่ม Google ใช้ในแอปไม่ได้เพราะ Google บล็อก</p>
+      <button class="pill primary" id="btn-login">ล็อกอินด้วยอีเมล</button>
+      <button class="link" id="btn-show-key">ใช้ Google อยู่? ดึง sessionKey จากเบราว์เซอร์แทน</button>
+      <form id="key-form" class="key" hidden>
+        <ol class="steps">
+          <li><button type="button" class="link inline" id="btn-open-browser">เปิด claude.ai ในเบราว์เซอร์</button> (ที่ล็อกอิน Google ไว้แล้ว)</li>
+          <li>กด <b>F12</b> → แท็บ <b>Application</b> → Cookies → claude.ai</li>
+          <li>ดับเบิลคลิกค่า <b>sessionKey</b> → Ctrl+C</li>
+        </ol>
+        <input id="key-input" type="password" placeholder="sk-ant-sid01-…" autocomplete="off" spellcheck="false">
+        <button class="pill" type="submit">บันทึก</button>
+        <button class="pill wide" type="button" id="btn-paste">วางจากคลิปบอร์ด</button>
+        <small id="key-msg"></small>
+      </form>
+    </section>
+
+    <footer class="foot" id="foot">
+      <span id="updated">กำลังโหลด…</span>
+      <button class="link" id="btn-open">claude.ai ↗</button>
+    </footer>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

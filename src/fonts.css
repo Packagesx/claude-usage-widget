@@ -1,0 +1,144 @@
+/* anuphan-thai-wght-normal */
+@font-face {
+  font-family: 'Anuphan Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 700;
+  src: url(fonts/anuphan-thai-wght-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* anuphan-latin-wght-normal */
+@font-face {
+  font-family: 'Anuphan Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 700;
+  src: url(fonts/anuphan-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* noto-sans-thai-thai-wght-normal */
+@font-face {
+  font-family: 'Noto Sans Thai Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url(fonts/noto-sans-thai-thai-wght-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* noto-sans-thai-latin-wght-normal */
+@font-face {
+  font-family: 'Noto Sans Thai Variable';
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url(fonts/noto-sans-thai-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* ibm-plex-sans-thai-thai-400-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Thai';
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src: url(fonts/ibm-plex-sans-thai-thai-400-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* ibm-plex-sans-thai-latin-400-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Thai';
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src: url(fonts/ibm-plex-sans-thai-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* ibm-plex-sans-thai-thai-500-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Thai';
+  font-style: normal;
+  font-display: block;
+  font-weight: 500;
+  src: url(fonts/ibm-plex-sans-thai-thai-500-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* ibm-plex-sans-thai-latin-500-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Thai';
+  font-style: normal;
+  font-display: block;
+  font-weight: 500;
+  src: url(fonts/ibm-plex-sans-thai-latin-500-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* ibm-plex-sans-thai-thai-600-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Thai';
+  font-style: normal;
+  font-display: block;
+  font-weight: 600;
+  src: url(fonts/ibm-plex-sans-thai-thai-600-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* ibm-plex-sans-thai-latin-600-normal */
+@font-face {
+  font-family: 'IBM Plex Sans Thai';
+  font-style: normal;
+  font-display: block;
+  font-weight: 600;
+  src: url(fonts/ibm-plex-sans-thai-latin-600-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* prompt-thai-400-normal */
+@font-face {
+  font-family: 'Prompt';
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src: url(fonts/prompt-thai-400-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* prompt-latin-400-normal */
+@font-face {
+  font-family: 'Prompt';
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src: url(fonts/prompt-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* prompt-thai-500-normal */
+@font-face {
+  font-family: 'Prompt';
+  font-style: normal;
+  font-display: block;
+  font-weight: 500;
+  src: url(fonts/prompt-thai-500-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* prompt-latin-500-normal */
+@font-face {
+  font-family: 'Prompt';
+  font-style: normal;
+  font-display: block;
+  font-weight: 500;
+  src: url(fonts/prompt-latin-500-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* prompt-thai-600-normal */
+@font-face {
+  font-family: 'Prompt';
+  font-style: normal;
+  font-display: block;
+  font-weight: 600;
+  src: url(fonts/prompt-thai-600-normal.woff2) format('woff2');
+  unicode-range: U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC;
+}
+/* prompt-latin-600-normal */
+@font-face {
+  font-family: 'Prompt';
+  font-style: normal;
+  font-display: block;
+  font-weight: 600;
+  src: url(fonts/prompt-latin-600-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}

@@ -1,0 +1,63 @@
+{
+  "name": "claude-usage-widget",
+  "productName": "Claude Usage Widget",
+  "version": "1.1.0",
+  "description": "Liquid Glass desktop widget for Windows that shows your claude.ai plan usage limits (unofficial)",
+  "main": "src/main.js",
+  "author": "Pack",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable --x64"
+  },
+  "devDependencies": {
+    "electron": "38.2.2",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.pack.claudeusagewidget",
+    "productName": "Claude Usage Widget",
+    "files": [
+      "src/**/*",
+      "build/tray*.png",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Claude Usage Widget",
+      "artifactName": "ClaudeUsageWidget-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "ClaudeUsageWidget-Portable-${version}.${ext}"
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Packagesx/claude-usage-widget.git"
+  },
+  "homepage": "https://github.com/Packagesx/claude-usage-widget",
+  "keywords": [
+    "claude",
+    "anthropic",
+    "usage",
+    "widget",
+    "windows",
+    "electron",
+    "liquid-glass"
+  ]
+}
