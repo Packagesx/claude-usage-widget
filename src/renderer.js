@@ -20,7 +20,8 @@
     }[mock];
     let cb = () => {};
     return {
-      getInitial: async () => ({ payload: null }),
+      getInitial: async () => ({ payload: null, color: { mode: params.get('color') || 'level', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
+      setColor() {},
       onUsage: (f) => { cb = f; setTimeout(() => f(data), 300); },
       refresh: () => { cb({ ...data, state: 'loading' }); setTimeout(() => cb({ ...data, updatedAt: Date.now() }), 600); },
       login() {}, hide() {}, menu() {}, openUsage() {}, resize() {},
@@ -133,6 +134,7 @@
     const auth = p.state === 'auth';
     $('#view-auth').hidden = !auth;
     $('#view-usage').hidden = auth;
+    if (panelOpen) { prevView = auth ? '#view-auth' : '#view-usage'; $('#view-auth').hidden = true; $('#view-usage').hidden = true; }
     $('#btn-refresh').hidden = auth;
 
     if (auth) { $('#org').textContent = 'ยังไม่ได้เชื่อมบัญชี'; $('#updated').textContent = ''; fit(); return; }
@@ -180,5 +182,72 @@
   $('#key-form').onsubmit = (e) => { e.preventDefault(); submitKey($('#key-input').value); };
   api.onFont && api.onFont((f) => { document.documentElement.dataset.font = f; fit(); });
   api.onUsage(render);
-  api.getInitial().then((r) => { if (r && r.payload) render(r.payload); else skeleton(); });
+  // ---- colour customisation ----
+  const PRESETS = ['#3a7bff', '#7b5cff', '#ff4fa3', '#ff5a5a', '#ff9a3c', '#d9774f', '#1fc8a0'];
+  let color = { mode: 'level', hex: '#3a7bff', speed: 8, warn: true };
+  function hexToHsl(hex) {
+    const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, s = 0;
+    if (d) { s = d / (1 - Math.abs(2 * l - 1));
+      h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return [h, s * 100, l * 100];
+  }
+  const hsl = (h, s, l) => `hsl(${h.toFixed(0)} ${Math.min(100, s).toFixed(0)}% ${Math.max(0, Math.min(100, l)).toFixed(0)}%)`;
+  function applyColor() {
+    const root = document.documentElement;
+    root.dataset.color = color.mode;
+    root.dataset.warn = color.warn ? 'on' : 'off';
+    const [h, s, l] = hexToHsl(color.mode === 'rgb' ? '#ff4d6d' : color.hex);
+    root.style.setProperty('--u2', hsl(h, s, Math.min(l, 58)));
+    root.style.setProperty('--u1', hsl(h, s * 0.95, Math.min(l, 58) + 22));
+    root.style.setProperty('--rgb-speed', `${color.speed}s`);
+    // panel state
+    document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === color.mode)));
+    document.querySelectorAll('.swatch[data-hex]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.hex.toLowerCase() === color.hex.toLowerCase())));
+    $('#color-input').value = color.hex;
+    $('#speed').value = color.speed; $('#speed-val').textContent = `${color.speed} วิ`;
+    $('#warn').checked = color.warn;
+    $('#speed-row').hidden = color.mode !== 'rgb';
+    $('#view-color').classList.toggle('level-mode', color.mode !== 'solid');
+    $('#mode-hint').textContent = { level: 'ฟ้า → ส้ม → แดง ตาม % ที่ใช้', solid: 'เลือกสีจากด้านล่าง หรือกด + เพื่อเลือกสีเอง', rgb: 'ไล่สีรุ้งวนตลอดเวลา + ขอบเรืองแสง' }[color.mode];
+    fit();
+  }
+  const saveColor = () => { applyColor(); api.setColor && api.setColor(color); };
+  PRESETS.forEach((hex) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'swatch'; b.dataset.hex = hex; b.title = hex; b.setAttribute('role', 'radio');
+    const [h, s, l] = hexToHsl(hex); b.style.setProperty('--s1', hsl(h, s, l + 22)); b.style.setProperty('--s2', hex);
+    b.onclick = () => { color.hex = hex; color.mode = 'solid'; saveColor(); };
+    $('#swatches').insertBefore(b, $('.swatch.custom'));
+  });
+  $('#color-input').oninput = (e) => { color.hex = e.target.value; color.mode = 'solid'; applyColor(); };
+  $('#color-input').onchange = () => saveColor();
+  document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { color.mode = b.dataset.mode; saveColor(); }));
+  $('#speed').oninput = (e) => { color.speed = Number(e.target.value); applyColor(); };
+  $('#speed').onchange = () => saveColor();
+  $('#warn').onchange = (e) => { color.warn = e.target.checked; saveColor(); };
+
+  var panelOpen = false, prevView = null; // var: render() may read these early
+  function toggleColorPanel(open = !panelOpen) {
+    panelOpen = open;
+    if (open) {
+      prevView = ['#view-usage', '#view-auth'].find((v) => !$(v).hidden) || '#view-usage';
+      $('#view-usage').hidden = true; $('#view-auth').hidden = true; $('#view-color').hidden = false;
+    } else {
+      $('#view-color').hidden = true; $(prevView || '#view-usage').hidden = false;
+    }
+    $('#btn-color').setAttribute('aria-pressed', String(open));
+    fit();
+  }
+  $('#btn-color').onclick = () => toggleColorPanel();
+  $('#btn-color-done').onclick = () => toggleColorPanel(false);
+  api.onOpenColor && api.onOpenColor(() => toggleColorPanel(true));
+  if (params.get('panel')) setTimeout(() => toggleColorPanel(true), 50);
+
+  api.getInitial().then((r) => {
+    if (r && r.color) color = { ...color, ...r.color };
+    applyColor();
+    if (r && r.payload) render(r.payload); else skeleton();
+  });
 })();

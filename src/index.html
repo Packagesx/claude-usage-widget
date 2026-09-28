@@ -10,6 +10,10 @@
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
+      <linearGradient id="rgbfill" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff4d6d"/><stop offset=".35" stop-color="#ffb84d"/>
+        <stop offset=".65" stop-color="#4dd8ff"/><stop offset="1" stop-color="#d46dff"/>
+      </linearGradient>
       <path id="wavepath" d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 V 20 H 0 Z"/>
     </defs>
   </svg>
@@ -31,6 +35,9 @@
         <button class="icon" id="btn-refresh" title="รีเฟรช" aria-label="รีเฟรช">
           <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
         </button>
+        <button class="icon" id="btn-color" title="สีของเหลว" aria-label="สีของเหลว">
+          <svg viewBox="0 0 24 24"><path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.7a5.5 5.5 0 0 1-11 0c0-3.1 2.5-6.1 5.5-9.7z"/></svg>
+        </button>
         <button class="icon" id="btn-menu" title="ตั้งค่า" aria-label="ตั้งค่า">
           <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
         </button>
@@ -44,6 +51,29 @@
     <section id="view-usage" class="view">
       <div class="orbs" id="orbs"></div>
       <div class="rows" id="rows"></div>
+    </section>
+
+    <!-- color panel -->
+    <section id="view-color" class="view colorp" hidden>
+      <h3>สีของเหลว</h3>
+      <div class="seg" role="radiogroup" aria-label="โหมดสี">
+        <button type="button" data-mode="level" role="radio">ตามระดับ</button>
+        <button type="button" data-mode="solid" role="radio">สีเดียว</button>
+        <button type="button" data-mode="rgb" role="radio">RGB</button>
+      </div>
+      <p class="hint" id="mode-hint"></p>
+      <div class="swatches" id="swatches">
+        <label class="swatch custom" title="เลือกสีเอง">
+          <input type="color" id="color-input" value="#3a7bff">
+        </label>
+      </div>
+      <label class="speed" id="speed-row">
+        <span>ความเร็ว RGB</span>
+        <input type="range" id="speed" min="2" max="30" step="1" value="8">
+        <em id="speed-val"></em>
+      </label>
+      <label class="check"><input type="checkbox" id="warn" checked> <span>เปลี่ยนเป็นสีแดงเมื่อใช้เกิน 90%</span></label>
+      <button class="pill primary" id="btn-color-done" type="button">เสร็จ</button>
     </section>
 
     <!-- auth view -->

@@ -53,8 +53,15 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - Glass material: Acrylic, Mica or Clear
   - Font: Anuphan, IBM Plex Sans Thai, Prompt or Noto Sans Thai, all bundled with the app
   - Organization switcher, if you belong to more than one
+- Liquid colour modes, set from the droplet button in the header:
+  - **ตามระดับ (By level):** blue → amber → red as usage rises (default)
+  - **สีเดียว (Single colour):** 7 presets, or pick any colour
+  - **RGB:** a rainbow cycle with a glowing rim, at an adjustable speed
+  - An optional red warning above 90% usage, in any mode
 - Follows the Windows light/dark theme.
 - Remembers where you placed it on screen.
+
+![Colour modes](docs/colors.png)
 
 ![Fonts](docs/fonts.png)
 

@@ -25,6 +25,7 @@ const DEFAULTS = {
   material: 'acrylic',        // acrylic | mica | clear
   font: 'anuphan',            // anuphan | plex | prompt | noto
   showOther: false,           // show quotas with unrecognised (codename) keys
+  color: { mode: 'level', hex: '#3a7bff', speed: 8, warn: true }, // level | solid | rgb
   orgId: null,
   notify: true,
   notified: {},               // { key: resets_at|threshold }
@@ -138,6 +139,7 @@ function buildTrayMenu() {
     { label: 'แสดงโควตาอื่นที่ claude.ai ไม่ได้ตั้งชื่อ', type: 'checkbox', checked: settings.showOther,
       click: (i) => { settings.showOther = i.checked; saveSettings(); refresh(); } },
     { label: 'ความถี่รีเฟรช', submenu: [1, 2, 5, 10].map(interval) },
+    { label: 'สีของเหลว / RGB…', click: () => { if (win) { win.show(); win.webContents.send('open-color'); } } },
     { label: 'ฟอนต์', submenu: [
       ['anuphan', 'Anuphan (โมเดิร์น — ค่าเริ่มต้น)'], ['plex', 'IBM Plex Sans Thai (เรียบ คม)'],
       ['prompt', 'Prompt (กลมมน)'], ['noto', 'Noto Sans Thai (มาตรฐาน)'],
@@ -414,7 +416,15 @@ async function signOut() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: settings.material }));
+ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: settings.material, color: settings.color }));
+ipcMain.on('set-color', (_e, c) => {
+  if (!c || typeof c !== 'object') return;
+  const hex = /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : settings.color.hex;
+  const mode = ['level', 'solid', 'rgb'].includes(c.mode) ? c.mode : 'level';
+  const speed = Math.max(2, Math.min(30, Number(c.speed) || 8));
+  settings.color = { mode, hex, speed, warn: c.warn !== false };
+  saveSettings(); buildTrayMenu();
+});
 ipcMain.on('refresh', () => refresh());
 ipcMain.on('login', () => openLogin());
 ipcMain.handle('set-session-key', (_e, k) => setSessionKey(k));
