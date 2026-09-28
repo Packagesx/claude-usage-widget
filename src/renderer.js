@@ -10,7 +10,7 @@
     const h = 36e5, now = Date.now();
     const data = {
       ok: { state: 'ok', org: 'Pro · you@example.com', updatedAt: now,
-        models: { total: 2.6e6, models: [{ name: 'Opus', tok: 1.6e6, pct: 61.5 }, { name: 'Sonnet', tok: 0.9e6, pct: 34.6 }, { name: 'Haiku', tok: 1e5, pct: 3.9 }] },
+        products: { title: 'This week’s usage by product', rows: [{ name: 'Claude Code', pct: 12 }, { name: 'Chats', pct: 23 }, { name: 'Cowork', pct: 65 }, { name: 'Other', pct: 0 }] },
         items: [
         { key: 'five_hour', th: 'เซสชันนี้', sub: 'รอบ 5 ชั่วโมง', pct: 42, resetsAt: new Date(now + 2.3 * h).toISOString() },
         { key: 'seven_day', th: 'สัปดาห์นี้', sub: 'ทุกโมเดล', pct: 83, resetsAt: new Date(now + 76 * h).toISOString() },
@@ -112,23 +112,23 @@
     // set fill levels on next frame so the transition runs
     requestAnimationFrame(() => requestAnimationFrame(() => {
       document.querySelectorAll('.gauge').forEach((g, i) => { g.querySelector('.orb').style.setProperty('--p', orbItems[i].pct / 100); });
-      document.querySelectorAll('.capsule').forEach((c, i) => c.style.setProperty('--p', rowItems[i].pct / 100));
+      document.querySelectorAll('#rows .capsule').forEach((c, i) => rowItems[i] && c.style.setProperty('--p', rowItems[i].pct / 100));
     }));
     tickResets();
   }
 
-  const MODEL_COLORS = { Opus: '#b48cff', Sonnet: '#ff9a6b', Haiku: '#39d3b0' };
-  const fmtTok = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
-  function renderModels(m) {
-    const el = $('#models');
-    if (!m) { el.hidden = true; return; }
+  // "This week's usage by product" (read from claude.ai/settings/usage)
+  const PRODUCT_TH = { 'Claude Code': 'Claude Code', Chats: 'แชท', Chat: 'แชท', Cowork: 'Cowork', Other: 'อื่น ๆ' };
+  function renderProducts(pr) {
+    const el = $('#products');
+    if (!pr || !pr.rows || !pr.rows.length) { el.hidden = true; return; }
     el.hidden = false;
-    const head = `<div class="mh"><b>สัดส่วนการใช้ตามโมเดล</b><em>Claude Code ในเครื่องนี้ · สัปดาห์นี้</em></div>`;
-    if (!m.models.length) { el.innerHTML = head + '<div class="none">ยังไม่มีการใช้ Claude Code ในสัปดาห์นี้</div>'; return; }
-    const col = (n) => MODEL_COLORS[n] || '#9aa4b8';
-    el.innerHTML = head +
-      `<div class="stack">${m.models.map((x) => `<i style="--m:${col(x.name)};flex:${Math.max(x.pct, 1.5)}" title="${esc(x.name)} ${x.pct.toFixed(1)}%"></i>`).join('')}</div>` +
-      `<div class="legend">${m.models.map((x) => `<span style="--m:${col(x.name)}">${esc(x.name)} <b>${Math.round(x.pct)}%</b> <small>${fmtTok(x.tok)}</small></span>`).join('')}</div>`;
+    el.innerHTML = `<div class="ph"><b>การใช้สัปดาห์นี้ตามผลิตภัณฑ์</b></div>` + pr.rows.map((r) => `
+      <div class="prow${r.pct > 0 ? '' : ' zero'}">
+        <span class="pn">${esc(PRODUCT_TH[r.name] || r.name)}</span>
+        <div class="capsule slim" data-level="ok" style="--p:${Math.max(0, Math.min(100, r.pct)) / 100}"><i></i></div>
+        <span class="pp">${Math.round(r.pct)}%</span>
+      </div>`).join('');
   }
 
   function skeleton() {
@@ -157,7 +157,7 @@
     else if (p.state === 'loading' || !p.items) skeleton();
     else { $('#orbs').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-2);text-align:center">ไม่มีข้อมูล usage สำหรับบัญชีนี้</p>'; }
 
-    renderModels(p.state === 'ok' || p.models ? p.models : null);
+    renderProducts(p.products);
     if (p.org) $('#org').textContent = p.org;
     const u = $('#updated');
     if (p.state === 'error') {
@@ -196,6 +196,61 @@
   };
   $('#key-form').onsubmit = (e) => { e.preventDefault(); submitKey($('#key-input').value); };
   api.onFont && api.onFont((f) => { document.documentElement.dataset.font = f; fit(); });
+  // ---- gimmick: poke the liquid ----
+  const QUIPS = ['blub!', 'ปุ๊ง~', 'บุ๋ง บุ๋ง', 'อย่าจิ้มแรงสิ', 'เย็นชื่นใจ 🧊', 'plop'];
+  const pokes = new WeakMap();
+  function poke(orb, ev) {
+    const r = orb.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const p = parseFloat(getComputedStyle(orb).getPropertyValue('--p')) || 0;
+    const liquidTop = r.height * (1 - p);
+    const now = Date.now();
+    const hist = (pokes.get(orb) || []).filter((t) => now - t < 2500); hist.push(now); pokes.set(orb, hist);
+
+    // ripple where you tapped
+    const rip = document.createElement('span'); rip.className = 'ripple';
+    rip.style.left = `${x}px`; rip.style.top = `${y}px`; orb.appendChild(rip);
+    setTimeout(() => rip.remove(), 750);
+
+    // spin the liquid if poked a lot, otherwise slosh it
+    const spin = hist.length >= 6;
+    orb.classList.remove('slosh', 'whirl'); void orb.offsetWidth;
+    orb.classList.add(spin ? 'whirl' : 'slosh');
+    clearTimeout(orb._t); orb._t = setTimeout(() => orb.classList.remove('slosh', 'whirl'), spin ? 1650 : 1350);
+
+    // bubbles rise through the liquid
+    const liquid = orb.querySelector('.liquid');
+    if (p > 0.04) {
+      const n = spin ? 14 : 7;
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement('span'); b.className = 'bubble';
+        const size = 4 + Math.random() * 7;
+        b.style.cssText = `left:${15 + Math.random() * 70}%;--s:${size}px;--d:${0.9 + Math.random() * 0.9}s;` +
+          `--w:${(Math.random() - 0.5) * 14}px;--h:${Math.max(12, (r.height - 6) * p - 6)}px;animation-delay:${Math.random() * 0.35}s`;
+        liquid.appendChild(b); setTimeout(() => b.remove(), 2200);
+      }
+    }
+    // a few droplets splash out of the surface
+    const drops = spin ? 8 : 4;
+    for (let i = 0; i < drops; i++) {
+      const d = document.createElement('span'); d.className = 'drop';
+      const ang = (-90 + (Math.random() - 0.5) * 120) * Math.PI / 180, dist = 18 + Math.random() * 22;
+      d.style.cssText = `left:${r.width / 2 + (Math.random() - 0.5) * r.width * 0.5}px;top:${Math.max(10, liquidTop)}px;` +
+        `--dx:${Math.cos(ang) * dist}px;--dy:${Math.sin(ang) * dist}px`;
+      orb.appendChild(d); setTimeout(() => d.remove(), 850);
+    }
+    // little speech bubble every few pokes
+    const gauge = orb.closest('.gauge');
+    if (spin && hist.length === 6) showToast(gauge, 'เวียนหัวแล้ว~ 🌀');
+    else if (hist.length === 3) showToast(gauge, QUIPS[Math.floor(Math.random() * QUIPS.length)]);
+  }
+  function showToast(host, text) {
+    host.querySelectorAll('.toast').forEach((t) => t.remove());
+    const t = document.createElement('div'); t.className = 'toast'; t.textContent = text;
+    host.appendChild(t); setTimeout(() => t.remove(), 1850);
+  }
+  $('#orbs').addEventListener('click', (ev) => { const orb = ev.target.closest('.orb'); if (orb && !orb.classList.contains('skeleton')) poke(orb, ev); });
+
   api.onUsage(render);
   // ---- colour customisation: liquid + glass ----
   const PRESETS = ['#3a7bff', '#7b5cff', '#ff4fa3', '#ff5a5a', '#ff9a3c', '#d9774f', '#1fc8a0'];

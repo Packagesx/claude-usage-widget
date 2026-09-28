@@ -314,21 +314,15 @@ html[data-glass="rgb"] .rgbglow i { animation: spinrim var(--rgb-speed) linear i
 
 
 
-/* ---------------- per-model share ---------------- */
-.models { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
-.models .mh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.models .mh b { font-size: 12px; font-weight: 600; }
-.models .mh em { font-style: normal; font-size: 10.5px; color: var(--ink-3); text-align: right; }
-.stack { display: flex; height: 10px; border-radius: 999px; overflow: hidden; gap: 2px; padding: 1px;
-  background: var(--well); box-shadow: inset 0 1px 2px var(--well-shade), inset 0 -1px 0 var(--well-edge); }
-.stack i { display: block; border-radius: 999px; min-width: 4px;
-  background: linear-gradient(180deg, color-mix(in srgb, white 35%, var(--m)), var(--m));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.55); }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; }
-.legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
-.legend span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--m); box-shadow: 0 0 6px var(--m); }
-.legend small { color: var(--ink-3); font-size: 10.5px; }
-.models .none { font-size: 11px; color: var(--ink-3); }
+/* ---------------- usage by product ---------------- */
+.products { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+.products .ph b { font-size: 12px; font-weight: 600; }
+.prow { display: grid; grid-template-columns: 84px 1fr 38px; gap: 10px; align-items: center; font-size: 12px; }
+.prow .pn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow .pp { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.prow.zero .pn, .prow.zero .pp { color: var(--ink-3); font-weight: 400; }
+.capsule.slim { height: 6px; }
+.prow.zero .capsule i { opacity: 0; }
 
 /* ---------------- colour panel ---------------- */
 .colorp { display: flex; flex-direction: column; gap: 10px; -webkit-app-region: no-drag; }
@@ -365,3 +359,48 @@ html[data-glass="rgb"] .rgbglow i { animation: spinrim var(--rgb-speed) linear i
 #btn-color svg { fill: var(--ink); stroke: none; opacity: .8; }
 html[data-color="solid"] #btn-color svg { fill: var(--u2); opacity: 1; }
 html[data-color="rgb"] #btn-color svg { fill: url(#rgbfill); opacity: 1; }
+
+/* ---------------- gimmick: poke the liquid ---------------- */
+.orb { -webkit-app-region: no-drag; cursor: pointer; }
+.orb .liquid { transform-origin: 50% 50%; }
+.orb.slosh .liquid { animation: slosh 1.3s cubic-bezier(.3,.7,.3,1); }
+.orb.slosh .wave.front { animation-duration: 1.1s !important; }
+.orb.slosh .wave.back { animation-duration: 1.6s !important; }
+.orb.slosh .num { animation: pop .5s cubic-bezier(.3,1.6,.5,1); }
+@keyframes slosh {
+  0% { transform: rotate(0); } 15% { transform: rotate(16deg); } 35% { transform: rotate(-11deg); }
+  55% { transform: rotate(6deg); } 75% { transform: rotate(-3deg); } 100% { transform: rotate(0); }
+}
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 100% { transform: scale(1); } }
+.orb.whirl .liquid { animation: whirl 1.6s cubic-bezier(.5,0,.3,1); }
+@keyframes whirl { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(540deg) scale(.92); } 100% { transform: rotate(720deg) scale(1); } }
+
+.bubble { position: absolute; bottom: -8px; width: var(--s); height: var(--s); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(255,255,255,.25) 45%, rgba(255,255,255,.05) 70%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+  animation: rise var(--d) cubic-bezier(.4,.1,.6,1) forwards; }
+@keyframes rise {
+  0% { transform: translate(0, 0) scale(.6); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: translate(var(--w), calc(var(--h) * -.5)) scale(1); }
+  100% { transform: translate(calc(var(--w) * -.6), calc(var(--h) * -1)) scale(1.1); opacity: 0; }
+}
+.ripple { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.8), inset 0 0 8px rgba(255,255,255,.6);
+  animation: ripple .7s ease-out forwards; }
+@keyframes ripple { to { transform: scale(5); opacity: 0; } }
+.drop { position: absolute; width: 7px; height: 9px; margin: -4px 0 0 -3px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: linear-gradient(180deg, var(--c1), var(--c2)); pointer-events: none; box-shadow: inset 0 1px 1px rgba(255,255,255,.7);
+  animation: drop .8s cubic-bezier(.2,.6,.4,1) forwards; }
+@keyframes drop {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  60% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; }
+  100% { transform: translate(calc(var(--dx) * 1.2), calc(var(--dy) + 30px)) scale(.6); opacity: 0; }
+}
+.toast { position: absolute; left: 50%; top: 10px; transform: translate(-50%, 0); white-space: nowrap; pointer-events: none;
+  font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; color: var(--ink);
+  background: var(--btn-hover); box-shadow: inset 0 1px 0 var(--well-edge), 0 4px 12px -4px rgba(0,0,0,.35);
+  animation: toast 1.8s ease forwards; z-index: 5; }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.9); } 15%, 80% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
+.gauge { position: relative; }
+.prow .capsule { grid-column: auto; }

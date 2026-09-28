@@ -4,7 +4,6 @@ const {
   nativeImage, Notification, shell, nativeTheme,
 } = require('electron');
 const path = require('path');
-const { modelShare } = require('./models');
 const fs = require('fs');
 
 const PARTITION = 'persist:claude';
@@ -295,6 +294,59 @@ function send(payload) {
 }
 
 let inflight = false;
+// ---------- "This week's usage by product" ----------
+// claude.ai shows a per-product breakdown (Claude Code / Chats / Cowork / Other) on
+// /settings/usage, but there's no documented API for it. We load that page in a hidden
+// window with the user's session and read the section's text, so whatever claude.ai
+// shows is what the widget shows. Throttled because it loads a full page.
+let lastProducts = null, productsAt = 0, productsBusy = false;
+const PRODUCTS_EVERY = 10 * 60 * 1000;
+const SCRAPE_JS = `(() => {
+  const RX = /usage by product|ตามผลิตภัณฑ์/i;
+  const heads = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,div,span,strong')]
+    .filter(e => e.children.length === 0 && RX.test(e.textContent || ''));
+  if (!heads.length) return null;
+  let box = heads[0];
+  for (let i = 0; i < 8 && box; i++) {
+    if (((box.innerText || '').match(/\\d+(?:\\.\\d+)?\\s*%/g) || []).length >= 2) break;
+    box = box.parentElement;
+  }
+  if (!box) return null;
+  const lines = (box.innerText || '').split(/[\\n\\t]/).map(s => s.trim()).filter(Boolean);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const m = lines[i].match(/^(<?\\s*\\d+(?:\\.\\d+)?)\\s*%$/);
+    if (m && !/%$/.test(lines[i - 1]) && !RX.test(lines[i - 1]))
+      rows.push({ name: lines[i - 1], pct: parseFloat(m[1].replace(/[<\\s]/g, '')) });
+  }
+  return rows.length ? { title: heads[0].textContent.trim(), rows } : null;
+})()`;
+
+async function scrapeProducts() {
+  const w = new BrowserWindow({ show: false, width: 1100, height: 1400,
+    webPreferences: { partition: PARTITION, contextIsolation: true, sandbox: true, backgroundThrottling: false } });
+  try {
+    await w.loadURL(`${BASE}/settings/usage`);
+    for (let i = 0; i < 25; i++) {            // SPA renders after load; poll up to ~25 s
+      await new Promise(r => setTimeout(r, 1000));
+      if (w.isDestroyed()) return null;
+      const r = await w.webContents.executeJavaScript(SCRAPE_JS, true).catch(() => null);
+      if (r) return r;
+    }
+    return null;
+  } finally { if (!w.isDestroyed()) w.destroy(); }
+}
+
+async function refreshProducts(force = false) {
+  if (productsBusy || (!force && Date.now() - productsAt < PRODUCTS_EVERY && lastProducts)) return;
+  productsBusy = true;
+  try {
+    const r = await scrapeProducts();
+    productsAt = Date.now();
+    if (r) { lastProducts = r; if (lastPayload && lastPayload.state === 'ok') send({ ...lastPayload, products: r }); }
+  } catch {} finally { productsBusy = false; }
+}
+
 async function refresh() {
   if (inflight) return; inflight = true;
   send({ ...(lastPayload || {}), state: 'loading' });
@@ -309,15 +361,8 @@ async function refresh() {
     const usage = await apiGet(`/api/organizations/${orgId}/usage`);
     const items = normalize(usage);
     const org = orgs.find(o => o.uuid === orgId);
-    // Per-model: use real per-model quotas if the plan has them, otherwise
-    // fall back to the share of Claude Code usage per model on this PC.
-    let models = null;
-    if (!items.some(i => /^seven_day_(opus|sonnet)$/.test(i.key))) {
-      const wk = items.find(i => i.key === 'seven_day');
-      const since = wk && wk.resetsAt ? Date.parse(wk.resetsAt) - 7 * 864e5 : Date.now() - 7 * 864e5;
-      try { models = await modelShare(since); } catch { models = null; }
-    }
-    send({ state: 'ok', items, models, org: orgLabel(org), updatedAt: Date.now() });
+    send({ state: 'ok', items, products: lastProducts, org: orgLabel(org), updatedAt: Date.now() });
+    refreshProducts(); // "This week's usage by product" — throttled, arrives a moment later
     maybeNotify(items);
     const five = items.find(i => i.key === 'five_hour');
     tray && tray.setToolTip(`Claude Usage${five ? ` — Session ${Math.round(five.pct)}%` : ''}`);
@@ -442,7 +487,7 @@ ipcMain.on('set-glass', (_e, g) => {
   };
   saveSettings();
 });
-ipcMain.on('refresh', () => refresh());
+ipcMain.on('refresh', () => { productsAt = 0; refresh(); });
 ipcMain.on('login', () => openLogin());
 ipcMain.handle('set-session-key', (_e, k) => setSessionKey(k));
 ipcMain.on('hide', () => win && win.hide());

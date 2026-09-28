@@ -42,7 +42,8 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
 
 - Liquid-glass orbs whose fill level shows usage. The colour changes from blue to amber to red as you get close to a limit.
 - A countdown to each reset, in Thai.
-- Per-model weekly limits (Opus, Sonnet) appear only when claude.ai reports them for your plan. When your plan has none (e.g. Pro), the widget shows **each model's share of your usage** instead, read from Claude Code's local logs (`~/.claude/projects`). That share covers Claude Code on this PC only, not claude.ai chat.
+- **This week's usage by product** (Claude Code / Chats / Cowork / Other), read from your claude.ai usage page. It refreshes every 10 minutes, or right away when you press refresh.
+- Per-model weekly limits (Opus, Sonnet) appear when claude.ai reports them for your plan.
 - Claude Code cloud-session credits (the `iguana_necktie` field in the API) are shown as dollars remaining, with the expiry date.
 - Limits that claude.ai returns under unannounced internal codenames (e.g. `nimbus_quill`) are not shown.
 - Tray menu with these settings:
@@ -57,6 +58,7 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - Liquid: **By level** (blue → amber → red, the default), **Single colour** (7 presets or any custom colour), or **RGB** (a rainbow cycle)
   - Glass: **Clear**, **Tinted** (a Liquid Glass-style colour tint with adjustable strength), or **RGB** (a soft, blurred rainbow light moving inside the glass)
   - An optional red warning above 90% usage
+- Click a liquid orb to make it slosh, bubble and splash. Poke it a few times fast and see what happens.
 - Follows the Windows light/dark theme.
 - Remembers where you placed it on screen.
 
@@ -80,6 +82,7 @@ Pushing a tag like `v1.2.0` makes GitHub Actions (`.github/workflows/release.yml
 - Usage data is fetched from inside a hidden `claude.ai` page that uses your signed-in session:
   - `GET /api/organizations`
   - `GET /api/organizations/{id}/usage`
+- The per-product breakdown has no API. The widget loads `claude.ai/settings/usage` in a hidden window (at most every 10 minutes) and reads the "usage by product" section from the page.
 - Only known limit types are shown. Internal codename fields are ignored.
 
 ## Fonts
