@@ -14,6 +14,7 @@
         { key: 'seven_day', th: 'สัปดาห์นี้', sub: 'ทุกโมเดล', pct: 83, resetsAt: new Date(now + 76 * h).toISOString() },
         { key: 'seven_day_opus', th: 'Opus', sub: 'โควตารายสัปดาห์', pct: 97, resetsAt: new Date(now + 76 * h).toISOString() },
         { key: 'seven_day_sonnet', th: 'Sonnet', sub: 'โควตารายสัปดาห์', pct: 18, resetsAt: new Date(now + 76 * h).toISOString() },
+        { key: 'iguana_necktie', kind: 'credit', th: 'เครดิต Cloud', sub: 'Claude Code บนคลาวด์', pct: 33, limit: 100, used: 33, left: 67, resetsAt: new Date(now + 38 * 24 * h).toISOString() },
       ] },
       auth: { state: 'auth' },
     }[mock];
@@ -67,14 +68,22 @@
       </div>`;
   }
 
+  const usd = (n) => '$' + (Math.round(n * 100) / 100).toFixed(n % 1 ? 2 : 0);
+  const rpText = (it) => (it.kind === 'credit' ? `เหลือ ${usd(it.left)} / ${usd(it.limit)}` : `${Math.round(it.pct)}%`);
+  function expiryText(iso) {
+    if (!iso) return 'ไม่มีวันหมดอายุ';
+    const d = new Date(iso), days = Math.ceil((d - Date.now()) / 864e5);
+    if (days <= 0) return 'หมดอายุแล้ว';
+    return `หมดอายุ ${d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} · อีก ${days} วัน`;
+  }
   function rowHTML(it) {
-    const p = Math.round(it.pct);
+    const credit = it.kind === 'credit';
     return `
       <div class="row">
         <span class="rl">${esc(it.th)}<em>${esc(it.sub)}</em></span>
-        <span class="rp">${p}%</span>
+        <span class="rp">${rpText(it)}</span>
         <div class="capsule" data-level="${level(it.pct)}" style="--p:0"><i></i></div>
-        <span class="rr" data-reset="${esc(it.resetsAt || '')}">${resetText(it.resetsAt)}</span>
+        <span class="rr" data-kind="${credit ? 'credit' : ''}" data-reset="${esc(it.resetsAt || '')}">${credit ? expiryText(it.resetsAt) : resetText(it.resetsAt)}</span>
       </div>`;
   }
 
@@ -97,7 +106,7 @@
       });
       const rows = [...document.querySelectorAll('.row')];
       rowItems.forEach((it, i) => { const r = rows[i]; if (!r) return;
-        r.querySelector('.rp').textContent = `${Math.round(it.pct)}%`; r.querySelector('.rr').dataset.reset = it.resetsAt || ''; });
+        r.querySelector('.rp').textContent = rpText(it); r.querySelector('.rr').dataset.reset = it.resetsAt || ''; });
     }
     // set fill levels on next frame so the transition runs
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -115,7 +124,7 @@
   }
 
   function tickResets() {
-    document.querySelectorAll('[data-reset]').forEach((el) => (el.textContent = resetText(el.dataset.reset || null)));
+    document.querySelectorAll('[data-reset]').forEach((el) => (el.textContent = el.dataset.kind === 'credit' ? expiryText(el.dataset.reset || null) : resetText(el.dataset.reset || null)));
   }
   setInterval(tickResets, 30000);
 

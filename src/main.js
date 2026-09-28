@@ -224,12 +224,29 @@ const LABELS = {
   seven_day_oauth_apps: { th: 'แอปที่เชื่อมต่อ', sub: 'โควตารายสัปดาห์' },
   seven_day_cowork:     { th: 'Cowork',      sub: 'โควตารายสัปดาห์' },
   extra_usage:          { th: 'Extra usage', sub: 'เครดิตเพิ่มเติม' },
+  iguana_necktie:       { th: 'เครดิต Cloud', sub: 'Claude Code บนคลาวด์' }, // fallback if no dollar fields
+};
+
+const CREDIT_LABELS = {
+  iguana_necktie: { th: 'เครดิต Cloud', sub: 'Claude Code บนคลาวด์' },
 };
 
 function normalize(usage) {
   const items = [];
   for (const [key, v] of Object.entries(usage || {})) {
     if (!v || typeof v !== 'object') continue;
+    // Dollar credit grants (e.g. iguana_necktie = Claude Code cloud-session credits):
+    // { limit_dollars, used_dollars, remaining_dollars, resets_at (= expiry) }
+    const lim = Number(v.limit_dollars);
+    if (lim > 0) {
+      let used = Number(v.used_dollars), left = Number(v.remaining_dollars);
+      if (!Number.isFinite(used)) used = Number.isFinite(left) ? lim - left : 0;
+      if (!Number.isFinite(left)) left = lim - used;
+      const meta = CREDIT_LABELS[key] || { th: 'เครดิต', sub: key.replace(/_/g, ' ') };
+      items.push({ key, kind: 'credit', pct: Math.max(0, Math.min(100, (used / lim) * 100)),
+        limit: lim, used, left: Math.max(0, left), resetsAt: v.resets_at || null, ...meta });
+      continue;
+    }
     const u = v.utilization;
     if (typeof u !== 'number') continue;
     if (key === 'extra_usage' && v.is_enabled === false) continue;
@@ -238,7 +255,7 @@ function normalize(usage) {
     items.push({ key, pct: Math.max(0, Math.min(100, u)), resetsAt: v.resets_at || null, ...meta });
   }
   const order = Object.keys(LABELS);
-  const rank = (k) => (order.indexOf(k) + 1) || 99;
+  const rank = (k) => (order.indexOf(k) + 1) || (CREDIT_LABELS[k] ? 90 : 99);
   items.sort((a, b) => rank(a.key) - rank(b.key));
   return items;
 }
