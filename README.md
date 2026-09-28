@@ -10,6 +10,10 @@ A small **Liquid Glass** desktop widget for **Windows** that shows your **claude
 
 ---
 
+## Smooth folding (2.4)
+
+When you collapse or expand the widget, the window resize itself is the animation. The panel is already laid out in its final form, and the window grows to reveal it or shrinks to clip it, anchored to the nearest screen edge. The window moves along a time-based ease curve, so late timer ticks never make it stutter. Sliding into and out of a screen edge uses the same smooth motion.
+
 ## Performance (2.3)
 
 All ambient animations are compositor-only, so they don't repaint. In testing, idle repaints fell from about 360/s to almost 0, and main-thread time fell from about 6.5% to 0.1%. **Reduce animations** in the tray stops the waves and glow completely.

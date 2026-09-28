@@ -730,17 +730,39 @@ function hiddenBounds(b, side) {
   const wa = screen.getDisplayMatching(b).workArea;
   return { ...b, x: side === 'left' ? wa.x - b.width + SLIVER : wa.x + wa.width - SLIVER };
 }
-function slideTo(target, done) {
+// Animate the window by *time*, not by step count: each tick jumps to wherever the
+// curve should be right now, so a late timer never makes the motion stutter or drag.
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+let animTimer = null;
+function animateBounds(target, ms, ease, done) {
+  if (!win || win.isDestroyed()) return;
+  clearInterval(animTimer);
   sliding = true;
-  const from = win.getBounds(), steps = 12; let i = 0;
-  const tick = () => {
-    if (!win || win.isDestroyed()) return;
-    i++; const t = 1 - Math.pow(1 - i / steps, 3); // ease-out cubic
-    win.setBounds({ ...target, x: Math.round(from.x + (target.x - from.x) * t) });
-    if (i < steps) setTimeout(tick, 14); else { sliding = false; done && done(); }
+  const from = win.getBounds(), t0 = Date.now();
+  const sameSize = from.width === target.width && from.height === target.height;
+  const step = () => {
+    if (!win || win.isDestroyed()) { clearInterval(animTimer); return; }
+    const t = Math.min(1, (Date.now() - t0) / ms), k = ease(t);
+    const x = Math.round(from.x + (target.x - from.x) * k), y = Math.round(from.y + (target.y - from.y) * k);
+    if (sameSize) win.setPosition(x, y);
+    else win.setBounds({ x, y, width: Math.round(from.width + (target.width - from.width) * k), height: Math.round(from.height + (target.height - from.height) * k) });
+    if (t >= 1) { clearInterval(animTimer); sliding = false; done && done(); }
   };
-  tick();
+  animTimer = setInterval(step, 8);
+  step();
 }
+function slideTo(target, done) { animateBounds(target, 220, easeOut, done); }
+// collapse / expand: the window itself is the animation; content stays laid out and is simply revealed or clipped
+ipcMain.handle('animate-resize', (_e, size) => new Promise((resolve) => {
+  if (!win || !size) return resolve(false);
+  const w = Math.round(Math.max(60, Math.min(700, size.w * settings.scale)));
+  const h = Math.round(Math.max(40, Math.min(1000, size.h * settings.scale)));
+  const b = dock.hidden ? dock.shown : win.getBounds();
+  const nb = anchoredBounds(b, w, h);
+  if (dock.hidden) { dock.shown = nb; win.setBounds(hiddenBounds(nb, dock.side)); return resolve(true); }
+  animateBounds(nb, Math.max(120, Math.min(600, size.ms || 260)), easeInOut, () => resolve(true));
+}));
 function hideIntoEdge() {
   if (!win || dock.hidden || !dock.side) return;
   dock.shown = win.getBounds(); dock.hidden = true;

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('widget', {
   setGhostInteractive: (v) => ipcRenderer.send('ghost-interactive', v),
   onGhostInteractive: (cb) => ipcRenderer.on('ghost-interactive', (_e, v) => cb(v)),
   onLowfx: (cb) => ipcRenderer.on('lowfx', (_e, v) => cb(v)),
+  animateResize: (size) => ipcRenderer.invoke('animate-resize', size),
   onFont: (cb) => ipcRenderer.on('font', (_e, f) => cb(f)),
   onUsage: (cb) => ipcRenderer.on('usage', (_e, p) => cb(p)),
   refresh: () => ipcRenderer.send('refresh'),

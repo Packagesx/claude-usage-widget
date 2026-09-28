@@ -434,9 +434,9 @@ html[data-glass="none"] :is(.titles, .glabel, .row, .prow, .products .ph, .foot,
 .chev[aria-expanded="false"] svg { transform: rotate(0deg); }
 .chev-mini { display: none; font-variant-numeric: tabular-nums; }
 .chev[aria-expanded="false"] .chev-mini { display: inline; }
-.details { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .35s cubic-bezier(.2,.8,.2,1), opacity .25s; }
+.details { display: grid; grid-template-rows: 1fr; }
 .details > .details-inner { min-height: 0; overflow: hidden; }
-.details.closed { grid-template-rows: 0fr; opacity: 0; }
+.details.closed { grid-template-rows: 0fr; }
 html.collapsed .foot { display: none; }
 html.collapsed .chev { margin-top: 6px; }
 html.collapsed .glass { padding-bottom: 8px; }
@@ -596,3 +596,8 @@ html.lowfx .orb[data-level="hot"]::after { opacity: .7; }
   background: var(--btn); box-shadow: inset 0 0 0 1px var(--edge-lo); white-space: nowrap; }
 html[data-ghost="1"] .ghost-hint { display: block; }
 html[data-ghost="1"].interactive .ghost-hint { opacity: 0; }
+
+/* collapse/expand: window resize drives the motion; keep the page steady and top-aligned meanwhile */
+html, body { overflow: hidden; }
+html.resizing .pets { opacity: 0; transition: opacity .12s; }
+.pets { transition: opacity .25s; }

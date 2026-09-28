@@ -243,8 +243,11 @@
   }
 
   // ---- auto-fit window height to content ----
+  let resizing = false; // while the window animates, don't fight it with live fits
   function fit() {
+    if (resizing) return;
     requestAnimationFrame(() => {
+      if (resizing) return;
       const r = $('#glass').getBoundingClientRect();
       api.resize({ w: Math.ceil(r.width), h: Math.ceil(r.height) });
     });
@@ -331,22 +334,41 @@
 
   // ---- collapse / expand the details ----
   let collapsed = params.get('collapsed') === '1';
-  function applyCollapsed(animate = true) {
-    const d = $('#details');
-    if (!animate) d.style.transition = 'none';
-    d.classList.toggle('closed', collapsed);
-    document.documentElement.classList.toggle('collapsed', collapsed);
-    $('#btn-chev').setAttribute('aria-expanded', String(!collapsed));
-    $('#btn-chev').title = collapsed ? 'แสดงรายละเอียด' : 'ซ่อนรายละเอียด';
-    if (!animate) requestAnimationFrame(() => (d.style.transition = ''));
-    // follow the height animation so the window shrinks/grows smoothly
-    const t0 = performance.now();
-    (function track() { fit(); if (performance.now() - t0 < 420) requestAnimationFrame(track); })();
+  function setCollapsedClasses(v) {
+    $('#details').classList.toggle('closed', v);
+    root.classList.toggle('collapsed', v);
+    $('#btn-chev').setAttribute('aria-expanded', String(!v));
+    $('#btn-chev').title = v ? 'แสดงรายละเอียด' : 'ซ่อนรายละเอียด';
   }
-  function toggleCollapsed() { collapsed = !collapsed; applyCollapsed(); api.setPref && api.setPref({ collapsed }); }
+  function applyCollapsed() { setCollapsedClasses(collapsed); fit(); }
+  const glassSize = () => { const r = $('#glass').getBoundingClientRect(); return { w: Math.ceil(r.width), h: Math.ceil(r.height) }; };
+  // The window resize *is* the animation. The content is laid out in its final (expanded) form and
+  // the window grows to reveal it / shrinks to clip it, anchored to whichever screen edge is nearest.
+  // One moving part means nothing can drift out of sync, so it stays smooth even against a screen edge.
+  async function toggleCollapsed() {
+    if (resizing) return;
+    const next = !collapsed;
+    api.setPref && api.setPref({ collapsed: next });
+    if (!api.animateResize) { collapsed = next; applyCollapsed(); return; }
+    resizing = true;
+    root.classList.add('resizing');
+    try {
+      if (!next) {                         // expand: lay out the full panel, then grow the window over it
+        collapsed = false; setCollapsedClasses(false);
+        await api.animateResize({ ...glassSize(), ms: 280 });
+      } else {                             // collapse: measure the small size, shrink the window, then swap layout
+        setCollapsedClasses(true); const target = glassSize(); setCollapsedClasses(false);
+        $('#btn-chev').setAttribute('aria-expanded', 'false');
+        await api.animateResize({ ...target, ms: 240 });
+        collapsed = true; setCollapsedClasses(true);
+      }
+    } finally {
+      resizing = false; root.classList.remove('resizing'); fit();
+    }
+  }
   $('#btn-chev').onclick = toggleCollapsed;
   api.onToggleCollapse && api.onToggleCollapse(toggleCollapsed);
-  applyCollapsed(false);
+  applyCollapsed();
   function updateChevMini(items) {
     const credit = (items || []).find((i) => i.kind === 'credit');
     $('#chev-mini').textContent = credit ? `เครดิตเหลือ $${credit.left.toFixed(2)}` : 'รายละเอียด';
