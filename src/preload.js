@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('widget', {
   onDock: (cb) => ipcRenderer.on('dock', (_e, v) => cb(v)),
   onAnchor: (cb) => ipcRenderer.on('anchor', (_e, v) => cb(v)),
   onPaused: (cb) => ipcRenderer.on('paused', (_e, v) => cb(v)),
+  onIcon: (cb) => ipcRenderer.on('icon', (_e, v) => cb(v)),
   onFont: (cb) => ipcRenderer.on('font', (_e, f) => cb(f)),
   onUsage: (cb) => ipcRenderer.on('usage', (_e, p) => cb(p)),
   refresh: () => ipcRenderer.send('refresh'),

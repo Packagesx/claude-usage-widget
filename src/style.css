@@ -548,3 +548,7 @@ html[data-alert="hot"] .dockbar { background: #ff3b5c; box-shadow: 0 0 8px #ff3b
 
 /* ---------- idle / hidden: stop all motion to save battery ---------- */
 html.paused *, html.paused *::before, html.paused *::after { animation-play-state: paused !important; }
+
+/* custom header icon: fill the tile */
+.mark.custom { background: transparent; box-shadow: 0 4px 10px rgba(0,0,0,.25); overflow: hidden; }
+.mark.custom img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }

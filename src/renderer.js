@@ -361,13 +361,22 @@
   // ---- session pace: burn rate + sparkline ----
   function renderBurn(b, sess) {
     const el = $('#burn');
-    if (!b || !sess || !b.spark || b.spark.length < 2 || !b.start || !b.end) { el.hidden = true; return; }
+    if (!sess) { el.hidden = true; return; }
     el.hidden = false;
+    if (!b || !b.start || !b.end) {
+      el.innerHTML = '<span class="bh">จังหวะการใช้เซสชัน</span><span class="bv">ยังไม่เริ่มรอบเซสชัน</span>'; return;
+    }
+    if (!b.spark || b.spark.length < 2) {
+      el.innerHTML = `<span class="bh">จังหวะการใช้เซสชัน</span><span class="bv">กำลังเก็บข้อมูล… กราฟจะขึ้นในไม่กี่นาที</span>
+        <svg class="spark" viewBox="0 0 300 30" preserveAspectRatio="none" aria-hidden="true"><line class="cap" x1="0" y1="0.5" x2="300" y2="0.5"/>
+        <line class="proj" x1="0" y1="29.5" x2="300" y2="29.5"/></svg>`;
+      return;
+    }
     const W = 300, H = 30, span = b.end - b.start;
     const X = (t) => Math.max(0, Math.min(W, ((t - b.start) / span) * W));
     const Y = (p) => H - (Math.max(0, Math.min(100, p)) / 100) * H;
     const pts = b.spark.filter(([t]) => t >= b.start - 6e4).map(([t, p]) => [X(t), Y(p)]);
-    if (pts.length < 2) { el.hidden = true; return; }
+    if (pts.length < 2) pts.unshift([0, pts[0] ? pts[0][1] : 30]);
     const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
     const area = `${line}L${pts[pts.length - 1][0].toFixed(1)},${H}L${pts[0][0].toFixed(1)},${H}Z`;
     const [nx, ny] = pts[pts.length - 1];
@@ -447,6 +456,15 @@
   // leaving a busy state (colour panel, login) should let the pill come back
   document.addEventListener('focusout', () => setTimeout(() => { if (!lastHover) collapse(); applyLayout(); }, 50));
   if (params.get('expanded')) { expanded = true; }
+
+  // ---- header icon ----
+  const SPARK = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3a27d"/><stop offset="1" stop-color="#c8603c"/></linearGradient></defs><path fill="url(#g)" d="M12 1.8c.7 5.6 3.1 8.1 10.2 10.2-7.1 2.1-9.5 4.6-10.2 10.2-.7-5.6-3.1-8.1-10.2-10.2C8.9 9.9 11.3 7.4 12 1.8z"/></svg>');
+  function setIcon(v) {
+    const img = document.querySelector('.mark img'); if (!img) return;
+    img.src = !v || v === 'box' ? 'box.png' : v === 'spark' ? SPARK : v;
+    document.querySelector('.mark').classList.toggle('custom', !!v && v.startsWith('data:image/') && v !== SPARK);
+  }
+  api.onIcon && api.onIcon(setIcon);
 
   api.onUsage(render);
   // ---- colour customisation: liquid + glass ----
@@ -541,6 +559,7 @@
   api.getInitial().then((r) => {
     if (r && r.color) color = { ...color, ...r.color };
     if (r && r.glass) glass = { ...glass, ...r.glass };
+    if (r && r.icon) setIcon(r.icon);
     applyColor();
     if (r && r.payload) render(r.payload); else skeleton();
   });

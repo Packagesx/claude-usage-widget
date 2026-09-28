@@ -1,7 +1,7 @@
 // Claude Usage Widget — main process
 const {
   app, BrowserWindow, Tray, Menu, ipcMain, session, screen, globalShortcut,
-  nativeImage, Notification, shell, nativeTheme,
+  nativeImage, Notification, shell, nativeTheme, dialog,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -27,6 +27,7 @@ const DEFAULTS = {
   scale: 1,                   // widget size: 0.75 | 0.85 | 1 | 1.15
   collapsed: false,           // hide the details below the orbs
   locked: false,              // lock position (no dragging)
+  icon: 'box',                // header icon: box | spark | custom
   layout: 'compact',          // compact = small pill that expands on hover | full = always the full panel
   snap: true,                 // magnetic snap to screen edges
   edgeHide: false,            // slide away into the screen edge when not in use
@@ -170,6 +171,11 @@ function buildTrayMenu() {
       click: (i) => { settings.notify = i.checked; saveSettings(); } },
     { label: 'ความถี่รีเฟรช', submenu: [1, 2, 5, 10].map(interval) },
     { label: 'สีของเหลว / RGB…', click: () => { if (win) { win.show(); win.webContents.send('open-color'); } } },
+    { label: 'ไอคอนมุมซ้ายบน', submenu: [
+      { label: 'กล่อง', type: 'radio', checked: settings.icon === 'box', click: () => setIcon('box') },
+      { label: 'ประกายดาว', type: 'radio', checked: settings.icon === 'spark', click: () => setIcon('spark') },
+      { label: 'เลือกรูปเอง…', type: 'radio', checked: settings.icon === 'custom', click: () => pickCustomIcon() },
+    ] },
     { label: 'ฟอนต์', submenu: [
       ['anuphan', 'Anuphan (โมเดิร์น — ค่าเริ่มต้น)'], ['plex', 'IBM Plex Sans Thai (เรียบ คม)'],
       ['prompt', 'Prompt (กลมมน)'], ['noto', 'Noto Sans Thai (มาตรฐาน)'],
@@ -315,7 +321,10 @@ let history = null; // { resetsAt, samples: [[t, pct], ...] } for the current 5-
 function loadHistory() { try { history = JSON.parse(fs.readFileSync(histPath(), 'utf8')); } catch { history = null; } }
 function recordSession(it) {
   if (!it) return null;
-  if (!history || history.resetsAt !== it.resetsAt) history = { resetsAt: it.resetsAt, samples: [] };
+  const sameWindow = history && history.resetsAt && it.resetsAt
+    && Math.abs(Date.parse(history.resetsAt) - Date.parse(it.resetsAt)) < 20 * 60 * 1000;
+  if (!sameWindow) history = { resetsAt: it.resetsAt, samples: [] };
+  else history.resetsAt = it.resetsAt;
   const now = Date.now(), last = history.samples[history.samples.length - 1];
   if (!last || now - last[0] > 50 * 1000) history.samples.push([now, it.pct]);
   if (history.samples.length > 400) history.samples.splice(0, history.samples.length - 400);
@@ -549,7 +558,35 @@ async function signOut() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass }));
+ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass, icon: iconDataUrl() }));
+
+// ---------- header icon: built-in box / sparkle, or any image the user picks ----------
+const customIconPath = () => path.join(app.getPath('userData'), 'custom-icon');
+function iconDataUrl() {
+  if (settings.icon === 'custom') {
+    try {
+      const meta = JSON.parse(fs.readFileSync(customIconPath() + '.json', 'utf8'));
+      return `data:${meta.mime};base64,` + fs.readFileSync(customIconPath()).toString('base64');
+    } catch { /* fall back to built-in */ }
+  }
+  return settings.icon === 'spark' ? 'spark' : 'box';
+}
+async function pickCustomIcon() {
+  const r = await dialog.showOpenDialog({ title: 'เลือกรูปไอคอน', properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico'] }] });
+  if (r.canceled || !r.filePaths[0]) return;
+  const f = r.filePaths[0], ext = path.extname(f).slice(1).toLowerCase();
+  const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', ico: 'image/x-icon' }[ext];
+  const buf = fs.readFileSync(f);
+  if (!mime || buf.length > 2 * 1024 * 1024) { dialog.showErrorBox('ใช้รูปนี้ไม่ได้', 'รองรับ PNG / JPG / WEBP / GIF / SVG / ICO ขนาดไม่เกิน 2 MB'); return; }
+  fs.writeFileSync(customIconPath(), buf);
+  fs.writeFileSync(customIconPath() + '.json', JSON.stringify({ mime }));
+  setIcon('custom');
+}
+function setIcon(v) {
+  settings.icon = v; saveSettings(); buildTrayMenu();
+  if (win) win.webContents.send('icon', iconDataUrl());
+}
 ipcMain.on('set-color', (_e, c) => {
   if (!c || typeof c !== 'object') return;
   const hex = /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : settings.color.hex;

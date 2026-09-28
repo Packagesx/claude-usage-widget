@@ -71,6 +71,7 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - An optional red warning above 90% usage
 - **Collapse** the details with the arrow under the orbs. Collapsed, the widget is just the two orbs; the arrow shows your remaining cloud credit.
 - **Session pace**: a sparkline of the current 5-hour window and your burn rate (%/hour). It also tells you whether you'll hit the limit before the reset (e.g. "expected full at 15:07").
+- **Header icon**: the box, a sparkle, or any image you pick (PNG/JPG/SVG/ICO, up to 2 MB), set from the tray.
 - **Widget size**: 75% / 85% / 100% / 115%, set from the tray.
 - **Tray icon** shows your session % as a small coloured ring.
 - **Global shortcut** `Ctrl+Alt+C` shows or hides the widget.
