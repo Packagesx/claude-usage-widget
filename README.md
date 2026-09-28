@@ -71,6 +71,7 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - An optional red warning above 90% usage
 - **Collapse** the details with the arrow under the orbs. Collapsed, the widget is just the two orbs; the arrow shows your remaining cloud credit.
 - **Session pace**: a sparkline of the current 5-hour window and your burn rate (%/hour). It also tells you whether you'll hit the limit before the reset (e.g. "expected full at 15:07").
+- **Pixel cats 🐾** that wander along the bottom of the glass. There are six of them: a walker, a sitter that hops around, a yarn player, a reader, a sleeper with little *z*s, and a fish-chasing sprinter. Click one and it meows. You can also add your own pet from any transparent PNG/GIF/WEBP. The cats are built to be light: there is no per-frame JavaScript, since each cat decides what to do on a timer every few seconds, and all motion is compositor-only CSS transforms. They are fully paused while the widget is a pill, faded, or hidden. In testing, six cats added about 1% main-thread time.
 - **Header icon**: the box, a sparkle, or any image you pick (PNG/JPG/SVG/ICO, up to 2 MB), set from the tray.
 - **Widget size**: 75% / 85% / 100% / 115%, set from the tray.
 - **Tray icon** shows your session % as a small coloured ring.

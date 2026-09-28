@@ -25,7 +25,7 @@
     }[mock];
     let cb = () => {};
     return {
-      getInitial: async () => ({ payload: null, glass: { mode: params.get('glass') || 'frost', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'mono', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
+      getInitial: async () => ({ payload: null, pets: (params.get('pets') || '').split(',').filter(Boolean).map((k) => ({ id: k, kind: k, src: `cats/${k}.png` })), glass: { mode: params.get('glass') || 'frost', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'mono', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
       setColor() {}, setGlass() {},
       onUsage: (f) => { cb = f; setTimeout(() => f(data), 300); },
       refresh: () => { cb({ ...data, state: 'loading' }); setTimeout(() => cb({ ...data, updatedAt: Date.now() }), 600); },
@@ -465,6 +465,7 @@
     document.querySelector('.mark').classList.toggle('custom', !!v && v.startsWith('data:image/') && v !== SPARK);
   }
   api.onIcon && api.onIcon(setIcon);
+  api.onPets && api.onPets((list) => { window.__pets && window.__pets.set(list); fit(); });
 
   api.onUsage(render);
   // ---- colour customisation: liquid + glass ----
@@ -560,6 +561,7 @@
     if (r && r.color) color = { ...color, ...r.color };
     if (r && r.glass) glass = { ...glass, ...r.glass };
     if (r && r.icon) setIcon(r.icon);
+    if (r && r.pets && window.__pets) window.__pets.set(r.pets);
     applyColor();
     if (r && r.payload) render(r.payload); else skeleton();
   });

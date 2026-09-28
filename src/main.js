@@ -28,6 +28,8 @@ const DEFAULTS = {
   collapsed: false,           // hide the details below the orbs
   locked: false,              // lock position (no dragging)
   icon: 'box',                // header icon: box | spark | custom
+  pets: ['orange', 'sleepy'], // pixel cats walking in the glass (ids of built-ins or custom-*)
+  customPets: [],             // [{ id, mime }] images the user added
   layout: 'compact',          // compact = small pill that expands on hover | full = always the full panel
   snap: true,                 // magnetic snap to screen edges
   edgeHide: false,            // slide away into the screen edge when not in use
@@ -171,6 +173,15 @@ function buildTrayMenu() {
       click: (i) => { settings.notify = i.checked; saveSettings(); } },
     { label: 'ความถี่รีเฟรช', submenu: [1, 2, 5, 10].map(interval) },
     { label: 'สีของเหลว / RGB…', click: () => { if (win) { win.show(); win.webContents.send('open-color'); } } },
+    { label: 'น้องแมว 🐾', submenu: [
+      ...PETS.map(([id, label]) => ({ label, type: 'checkbox', checked: (settings.pets || []).includes(id), click: (i) => togglePet(id, i.checked) })),
+      { type: 'separator' },
+      ...(settings.customPets || []).map((c, n) => ({ label: `น้องของฉัน ${n + 1}`, submenu: [
+        { label: 'แสดง', type: 'checkbox', checked: (settings.pets || []).includes(c.id), click: (i) => togglePet(c.id, i.checked) },
+        { label: 'ลบออก', click: () => removeCustomPet(c.id) } ] })),
+      { label: 'เพิ่มน้องจากรูปเอง…', click: () => addCustomPet() },
+      { label: 'ซ่อนทั้งหมด', click: () => { settings.pets = []; pushPets(); } },
+    ] },
     { label: 'ไอคอนมุมซ้ายบน', submenu: [
       { label: 'กล่อง', type: 'radio', checked: settings.icon === 'box', click: () => setIcon('box') },
       { label: 'ประกายดาว', type: 'radio', checked: settings.icon === 'spark', click: () => setIcon('spark') },
@@ -558,7 +569,47 @@ async function signOut() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass, icon: iconDataUrl() }));
+ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass, icon: iconDataUrl(), pets: petList() }));
+
+// ---------- pets: pixel cats that wander around the glass ----------
+const PETS = [
+  ['orange', 'ส้มจี๊ด — เดินเล่น'], ['black', 'ดำ — นั่งเฝ้า'], ['calico', 'สามสี — เล่นไหมพรม'],
+  ['reader', 'นักอ่าน — อ่านหนังสือ'], ['sleepy', 'ขี้เซา — นอนหลับ'], ['siamese', 'วิเชียรมาศ — วิ่งไล่ปลา'],
+];
+const petsDir = () => path.join(app.getPath('userData'), 'pets');
+function petList() {
+  return (settings.pets || []).map((id) => {
+    if (!id.startsWith('custom-')) return PETS.some(([k]) => k === id) ? { id, kind: id, src: `cats/${id}.png` } : null;
+    const meta = (settings.customPets || []).find((c) => c.id === id);
+    if (!meta) return null;
+    try { return { id, kind: 'custom', src: `data:${meta.mime};base64,` + fs.readFileSync(path.join(petsDir(), id)).toString('base64') }; }
+    catch { return null; }
+  }).filter(Boolean);
+}
+function pushPets() { saveSettings(); buildTrayMenu(); if (win) win.webContents.send('pets', petList()); }
+function togglePet(id, on) {
+  const set = new Set(settings.pets || []);
+  if (on) set.add(id); else set.delete(id);
+  settings.pets = [...set].slice(0, 6); // keep it light: at most 6 on screen
+  pushPets();
+}
+async function addCustomPet() {
+  const r = await dialog.showOpenDialog({ title: 'เลือกรูปน้อง (PNG/GIF/WEBP พื้นหลังใส)', properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'gif', 'webp'] }] });
+  if (r.canceled || !r.filePaths[0]) return;
+  const f = r.filePaths[0], ext = path.extname(f).slice(1).toLowerCase(), buf = fs.readFileSync(f);
+  if (buf.length > 1024 * 1024) { dialog.showErrorBox('รูปใหญ่เกินไป', 'ใช้รูปขนาดไม่เกิน 1 MB (แนะนำภาพพิกเซลเล็กๆ พื้นหลังใส)'); return; }
+  fs.mkdirSync(petsDir(), { recursive: true });
+  const id = 'custom-' + Date.now().toString(36);
+  fs.writeFileSync(path.join(petsDir(), id), buf);
+  settings.customPets = [...(settings.customPets || []), { id, mime: { png: 'image/png', gif: 'image/gif', webp: 'image/webp' }[ext] }];
+  togglePet(id, true);
+}
+function removeCustomPet(id) {
+  settings.customPets = (settings.customPets || []).filter((c) => c.id !== id);
+  try { fs.unlinkSync(path.join(petsDir(), id)); } catch {}
+  togglePet(id, false);
+}
 
 // ---------- header icon: built-in box / sparkle, or any image the user picks ----------
 const customIconPath = () => path.join(app.getPath('userData'), 'custom-icon');
