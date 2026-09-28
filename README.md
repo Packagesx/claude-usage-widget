@@ -4,11 +4,22 @@ A small **Liquid Glass** desktop widget for **Windows** that shows your **claude
 
 วิดเจ็ตหน้าจอสำหรับ Windows ธีม Liquid Glass แสดง % การใช้งานแพลน claude.ai (เซสชัน 5 ชม. / รายสัปดาห์) พร้อมเวลารีเซ็ต
 
-![Preview (dark)](docs/preview-dark.png)
+![Claude Usage Widget 2.0](docs/v2.png)
 
 > ⚠️ **Unofficial.** This project is not affiliated with or endorsed by Anthropic. It reads the same usage data that claude.ai shows on its own settings page, through an undocumented endpoint. That endpoint may change at any time, and if it does, the widget can stop working.
 
 ---
+
+## What's new in 2.0
+
+- **Compact by default.** The widget starts as a small glass pill with two minimalist rings (session and weekly). Hover over it and it smoothly expands into the full panel; move the mouse away and it folds back. You can switch to the always-full layout from the tray.
+- **Monochrome by default.** Rings and liquid are white/grey (following light/dark mode) while usage is under 50%. They turn yellow → orange → red only as you approach a limit.
+- **Soft breathing alert.** Above 80% the frame glows slowly amber (red above 90%). There is no blinking and no pop-ups.
+- **Magnetic snap.** When you drop the widget near a screen edge, it snaps to that edge.
+- **Hide in the edge (optional).** A widget snapped to the left or right edge slides away when you're not using it, leaving a thin handle. It slides back out when your mouse touches the handle.
+- **Ghost mode.** The widget becomes click-through, so you can click whatever is behind it. Toggle it with `Ctrl+Alt+G`.
+- **Adaptive opacity.** When the mouse is far away, the widget fades to 20/30/50% (your choice) and comes back instantly as the cursor approaches. Animations pause while it's faded or hidden to save battery.
+- **Smooth values.** Numbers and rings glide to each new value using requestAnimationFrame interpolation, instead of jumping on every refresh.
 
 ## Download / ดาวน์โหลด
 

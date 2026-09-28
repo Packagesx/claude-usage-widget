@@ -1,5 +1,6 @@
 (() => {
   const $ = (s) => document.querySelector(s);
+  const root = document.documentElement;
   const params = new URLSearchParams(location.search);
   document.documentElement.dataset.material = params.get('material') || 'acrylic';
   document.documentElement.dataset.font = params.get('font') || 'anuphan';
@@ -24,18 +25,43 @@
     }[mock];
     let cb = () => {};
     return {
-      getInitial: async () => ({ payload: null, glass: { mode: params.get('glass') || 'frost', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'level', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
+      getInitial: async () => ({ payload: null, glass: { mode: params.get('glass') || 'frost', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'mono', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
       setColor() {}, setGlass() {},
       onUsage: (f) => { cb = f; setTimeout(() => f(data), 300); },
       refresh: () => { cb({ ...data, state: 'loading' }); setTimeout(() => cb({ ...data, updatedAt: Date.now() }), 600); },
-      login() {}, hide() {}, menu() {}, openUsage() {}, resize() {},
+      login() {}, hide() {}, menu() {}, openUsage() {}, resize() {}, setUiState() {},
       setSessionKey: async (k) => (k.startsWith('sk-ant-') ? { ok: true } : { ok: false, error: 'sessionKey ควรขึ้นต้นด้วย sk-ant-' }),
     };
   })();
 
   // ---- helpers ----
-  const level = (p) => (p >= 90 ? 'hot' : p >= 70 ? 'warn' : 'ok');
+  const level = (p) => (p >= 90 ? 'hot' : p >= 70 ? 'warn' : p >= 50 ? 'mid' : 'ok');
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---- local interpolation: numbers and rings glide toward the latest value ----
+  const tweens = new Map(); let raf = 0;
+  function tween(key, target, apply) {
+    const t = tweens.get(key);
+    if (t) { t.target = target; t.apply = apply; } else tweens.set(key, { cur: 0, target, apply, shown: null });
+    if (!raf) raf = requestAnimationFrame(stepTweens);
+  }
+  function stepTweens() {
+    raf = 0; let moving = false;
+    for (const t of tweens.values()) {
+      const d = t.target - t.cur;
+      if (Math.abs(d) < 0.05) t.cur = t.target; else { t.cur += d * 0.12; moving = true; }
+      t.apply(t.cur);
+    }
+    if (moving) raf = requestAnimationFrame(stepTweens); // rAF is paused automatically while the window is hidden
+  }
+  function shortReset(iso) {
+    if (!iso) return '—';
+    const ms = new Date(iso) - Date.now(); if (ms <= 0) return 'รีเซ็ตแล้ว';
+    const m = Math.round(ms / 6e4), h = Math.floor(m / 60);
+    if (h < 24) return h ? `${h}ชม. ${m % 60}น.` : `${m} นาที`;
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('th-TH', { weekday: 'short' })} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+  }
 
   function resetText(iso) {
     if (!iso) return 'ยังไม่เริ่มรอบ';
@@ -53,7 +79,7 @@
 
   function orbHTML(it) {
     const p = Math.round(it.pct);
-    const num = `${p}<span>%</span>`;
+    const num = `0<span>%</span>`;
     return `
       <div class="gauge" data-key="${esc(it.key)}">
         <div class="orb" data-level="${level(it.pct)}" style="--p:0" role="img" aria-label="${esc(it.th)} ${p}%">
@@ -100,13 +126,13 @@
 
     if (keys !== lastKeys) {
       $('#orbs').innerHTML = orbItems.map(orbHTML).join('');
+      orbItems.forEach((it) => { const t = tweens.get('orb:' + it.key); if (t) t.shown = null; });
       $('#rows').innerHTML = rowItems.map(rowHTML).join('');
       lastKeys = keys;
     } else {
       // update numbers in place so the liquid animates smoothly
       orbItems.forEach((it) => {
         const g = $(`.gauge[data-key="${it.key}"]`); if (!g) return;
-        g.querySelectorAll('.num').forEach((n) => (n.innerHTML = `${Math.round(it.pct)}<span>%</span>`));
         g.querySelector('.reset').dataset.reset = it.resetsAt || '';
       });
       const rows = [...document.querySelectorAll('.row')];
@@ -116,6 +142,10 @@
     // set fill levels on next frame so the transition runs
     requestAnimationFrame(() => requestAnimationFrame(() => {
       document.querySelectorAll('.gauge').forEach((g, i) => { g.querySelector('.orb').style.setProperty('--p', orbItems[i].pct / 100); });
+      orbItems.forEach((it) => tween('orb:' + it.key, it.pct, (v) => {
+        const r = Math.round(v), t = tweens.get('orb:' + it.key); if (t.shown === r) return; t.shown = r;
+        document.querySelectorAll(`.gauge[data-key="${it.key}"] .num`).forEach((n) => (n.innerHTML = `${r}<span>%</span>`));
+      }));
       document.querySelectorAll('#rows .capsule').forEach((c, i) => rowItems[i] && c.style.setProperty('--p', rowItems[i].pct / 100));
     }));
     tickResets();
@@ -135,6 +165,35 @@
       </div>`).join('');
   }
 
+  // ---- compact pill: two minimalist rings ----
+  let pillKeys = '';
+  function renderPill(items) {
+    const segs = [['five_hour', 'เซสชัน'], ['seven_day', 'สัปดาห์']].map(([k, label]) => [items.find((i) => i.key === k), label]).filter(([it]) => it);
+    const keys = segs.map(([it]) => it.key).join('|');
+    if (keys !== pillKeys) {
+      $('#pill').innerHTML = segs.map(([it, label]) => `
+        <div class="pseg" data-key="${it.key}" data-level="${level(it.pct)}">
+          <span class="rwrap"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+            <circle class="track" cx="20" cy="20" r="16"/>
+            <circle class="arc" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+          </svg><b class="rn">0</b></span>
+          <span class="pl"><span>${label}</span><em data-short="${esc(it.resetsAt || '')}">${shortReset(it.resetsAt)}</em></span>
+        </div>`).join('');
+      pillKeys = keys;
+      segs.forEach(([it]) => { const t = tweens.get('pill:' + it.key); if (t) t.shown = null; });
+    }
+    segs.forEach(([it]) => {
+      const seg = $(`.pseg[data-key="${it.key}"]`); if (!seg) return;
+      seg.dataset.level = level(it.pct);
+      seg.querySelector('[data-short]').dataset.short = it.resetsAt || '';
+      const arc = seg.querySelector('.arc'), rn = seg.querySelector('.rn');
+      tween('pill:' + it.key, it.pct, (v) => {
+        arc.style.strokeDashoffset = String(100 - Math.max(0.5, v));
+        const r = Math.round(v), t = tweens.get('pill:' + it.key); if (t.shown !== r) { t.shown = r; rn.textContent = r; }
+      });
+    });
+  }
+
   function skeleton() {
     $('#orbs').innerHTML = [0, 1].map(() => `
       <div class="gauge"><div class="orb skeleton"><div class="liquid"></div><div class="shine"></div></div>
@@ -143,6 +202,7 @@
   }
 
   function tickResets() {
+    document.querySelectorAll('[data-short]').forEach((el) => (el.textContent = shortReset(el.dataset.short || null)));
     document.querySelectorAll('[data-reset]').forEach((el) => (el.textContent = el.dataset.kind === 'credit' ? expiryText(el.dataset.reset || null) : resetText(el.dataset.reset || null)));
   }
   setInterval(tickResets, 30000);
@@ -155,13 +215,19 @@
     if (panelOpen) { prevView = auth ? '#view-auth' : '#view-usage'; $('#view-auth').hidden = true; $('#view-usage').hidden = true; }
     $('#btn-refresh').hidden = auth;
 
-    if (auth) { $('#org').textContent = 'ยังไม่ได้เชื่อมบัญชี'; $('#updated').textContent = ''; fit(); return; }
+    authState = auth;
+    if (auth) { $('#org').textContent = 'ยังไม่ได้เชื่อมบัญชี'; $('#updated').textContent = ''; applyLayout(); return; }
 
     if (p.items && p.items.length) renderItems(p.items);
     else if (p.state === 'loading' || !p.items) skeleton();
     else { $('#orbs').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-2);text-align:center">ไม่มีข้อมูล usage สำหรับบัญชีนี้</p>'; }
 
     renderProducts(p.products);
+    if (p.items && p.items.length) {
+      renderPill(p.items); hasData = true;
+      const top = Math.max(0, ...p.items.filter((i) => i.key === 'five_hour' || i.key === 'seven_day').map((i) => i.pct));
+      document.documentElement.dataset.alert = top >= 90 ? 'hot' : top >= 80 ? 'warn' : '';
+    }
     renderBurn(p.burn, (p.items || []).find((i) => i.key === 'five_hour'));
     drawTrayIcon((p.items || []).find((i) => i.key === 'five_hour'));
     updateChevMini(p.items);
@@ -173,11 +239,16 @@
       const t = new Date(p.updatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
       u.innerHTML = `<span class="dot"></span>อัปเดต ${t}`;
     } else u.textContent = 'กำลังโหลด…';
-    fit();
+    applyLayout();
   }
 
   // ---- auto-fit window height to content ----
-  function fit() { requestAnimationFrame(() => api.resize(Math.ceil($('#glass').getBoundingClientRect().height))); }
+  function fit() {
+    requestAnimationFrame(() => {
+      const r = $('#glass').getBoundingClientRect();
+      api.resize({ w: Math.ceil(r.width), h: Math.ceil(r.height) });
+    });
+  }
   new ResizeObserver(fit).observe($('#glass'));
 
   // ---- events ----
@@ -325,10 +396,11 @@
   let lastTray = '';
   function drawTrayIcon(sess) {
     if (!api.setTrayIcon || !sess) return;
-    const pct = Math.round(sess.pct), key = `${pct}|${level(sess.pct)}`;
+    const pct = Math.round(sess.pct), key = `${pct}|${level(sess.pct)}|${document.documentElement.dataset.color}`;
     if (key === lastTray) return; lastTray = key;
     const c = document.createElement('canvas'); c.width = c.height = 64;
-    const g = c.getContext('2d'), col = { ok: '#4aa3ff', warn: '#ff9a3c', hot: '#ff3b5c' }[level(sess.pct)];
+    const mono = document.documentElement.dataset.color === 'mono';
+    const g = c.getContext('2d'), col = { ok: mono ? '#ffffff' : '#4aa3ff', mid: mono ? '#f5c542' : '#4aa3ff', warn: '#ff9a3c', hot: '#ff3b5c' }[level(sess.pct)];
     g.lineWidth = 9; g.lineCap = 'round';
     g.strokeStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.stroke();
     g.strokeStyle = col; g.beginPath(); g.arc(32, 32, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.02, pct / 100)); g.stroke();
@@ -337,18 +409,57 @@
     api.setTrayIcon(c.toDataURL('image/png'));
   }
 
+  // ---- progressive disclosure: pill ⇄ full panel on hover ----
+  var layout = params.get('layout') || 'full', expanded = false, hasData = false, authState = false;
+  var ghost = params.get('ghost') === '1', lastHover = false, enterT = 0, leaveT = 0;
+  const isBusy = () => panelOpen || authState || !$('#key-form').hidden || (document.activeElement && document.activeElement.tagName === 'INPUT');
+  function applyLayout() {
+    root.dataset.layout = layout;
+    const pill = layout === 'compact' && hasData && !expanded && !isBusy();
+    root.classList.toggle('pillmode', pill);
+    api.setUiState && api.setUiState({ expanded: !pill, busy: isBusy() });
+    fit();
+  }
+  function expand() {
+    if (expanded) return;
+    expanded = true; root.classList.remove('shrink'); root.classList.add('pop');
+    applyLayout(); setTimeout(() => root.classList.remove('pop'), 320);
+  }
+  function collapse() {
+    if (!expanded || isBusy() || lastHover) return;
+    root.classList.add('shrink');
+    setTimeout(() => { root.classList.remove('shrink'); if (lastHover) return; expanded = false; applyLayout(); }, 150);
+  }
+  function onHover(v) {
+    lastHover = v;
+    if (layout !== 'compact' || ghost) return;
+    clearTimeout(enterT); clearTimeout(leaveT);
+    if (v) enterT = setTimeout(expand, 120); else leaveT = setTimeout(collapse, 450);
+  }
+  api.onHover && api.onHover(onHover);
+  api.onLayout && api.onLayout((v) => { layout = v; expanded = false; applyLayout(); });
+  const setGhost = (v) => { ghost = v; root.dataset.ghost = v ? '1' : ''; if (v) { expanded = false; applyLayout(); } };
+  setGhost(ghost);
+  api.onGhost && api.onGhost(setGhost);
+  api.onDock && api.onDock((d) => { root.dataset.dock = d.hidden ? d.side : ''; if (d.hidden) { expanded = false; applyLayout(); } });
+  api.onAnchor && api.onAnchor((a) => { root.dataset.ax = a.right ? 'r' : 'l'; root.dataset.ay = a.bottom ? 'b' : 't'; });
+  api.onPaused && api.onPaused((v) => root.classList.toggle('paused', v));
+  // leaving a busy state (colour panel, login) should let the pill come back
+  document.addEventListener('focusout', () => setTimeout(() => { if (!lastHover) collapse(); applyLayout(); }, 50));
+  if (params.get('expanded')) { expanded = true; }
+
   api.onUsage(render);
   // ---- colour customisation: liquid + glass ----
   const PRESETS = ['#3a7bff', '#7b5cff', '#ff4fa3', '#ff5a5a', '#ff9a3c', '#d9774f', '#1fc8a0'];
-  let color = { mode: 'level', hex: '#3a7bff', speed: 8, warn: true };
+  let color = { mode: 'mono', hex: '#3a7bff', speed: 8, warn: true };
   let glass = { mode: 'frost', hex: '#7b5cff', strength: 55 };
   let tab = 'liquid';
   const MODES = {
-    liquid: [['level', 'ตามระดับ'], ['solid', 'สีเดียว'], ['rgb', 'RGB']],
+    liquid: [['mono', 'โมโน'], ['level', 'ตามระดับ'], ['solid', 'สีเดียว'], ['rgb', 'RGB']],
     glass: [['none', 'ใส'], ['frost', 'ฝ้า'], ['solid', 'ใส่สี'], ['rgb', 'RGB']],
   };
   const HINTS = {
-    liquid: { level: 'ฟ้า → ส้ม → แดง ตาม % ที่ใช้', solid: 'เลือกสีด้านล่าง หรือกด + เลือกสีเอง', rgb: 'ของเหลวไล่สีรุ้งวนตลอดเวลา' },
+    liquid: { mono: 'ขาว/เทาตามธีม · เริ่มมีสีเหลือง→ส้ม→แดง เมื่อใช้เกิน 50%', level: 'ฟ้า → ส้ม → แดง ตาม % ที่ใช้', solid: 'เลือกสีด้านล่าง หรือกด + เลือกสีเอง', rgb: 'ของเหลวไล่สีรุ้งวนตลอดเวลา' },
     glass: { none: 'ใสจริง ไม่มีสี ไม่เบลอ · สลับโหมดนี้แอปจะรีสตาร์ตแป๊บนึง', frost: 'กระจกฝ้าเบลอพื้นหลัง (แบบเดิม)', solid: 'กระจกย้อมสีแบบ Liquid Glass', rgb: 'แสงรุ้งเบลอๆ ลอยอยู่ข้างในกระจก' },
   };
   function hexToHsl(hex) {
@@ -387,7 +498,7 @@
     $('#strength').value = glass.strength; $('#strength-val').textContent = `${glass.strength}%`;
     $('#speed-row').hidden = c.mode !== 'rgb';
     $('#speed').value = color.speed; $('#speed-val').textContent = `${color.speed} วิ`;
-    $('#warn-row').hidden = tab !== 'liquid' || color.mode === 'level';
+    $('#warn-row').hidden = tab !== 'liquid' || color.mode === 'level' || color.mode === 'mono';
     $('#warn').checked = color.warn;
     fit();
   }
@@ -417,9 +528,10 @@
       $('#view-usage').hidden = true; $('#view-auth').hidden = true; $('#view-color').hidden = false;
     } else {
       $('#view-color').hidden = true; $(prevView || '#view-usage').hidden = false;
+      setTimeout(() => { if (!lastHover) collapse(); }, 300);
     }
     $('#btn-color').setAttribute('aria-pressed', String(open));
-    fit();
+    applyLayout();
   }
   $('#btn-color').onclick = () => toggleColorPanel();
   $('#btn-color-done').onclick = () => toggleColorPanel(false);

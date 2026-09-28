@@ -27,7 +27,12 @@ const DEFAULTS = {
   scale: 1,                   // widget size: 0.75 | 0.85 | 1 | 1.15
   collapsed: false,           // hide the details below the orbs
   locked: false,              // lock position (no dragging)
-  color: { mode: 'level', hex: '#3a7bff', speed: 8, warn: true }, // liquid: level | solid | rgb
+  layout: 'compact',          // compact = small pill that expands on hover | full = always the full panel
+  snap: true,                 // magnetic snap to screen edges
+  edgeHide: false,            // slide away into the screen edge when not in use
+  ghost: false,               // click-through
+  fade: 0.3,                  // idle opacity (1 = never fade)
+  color: { mode: 'mono', hex: '#3a7bff', speed: 8, warn: true },  // liquid: mono | level | solid | rgb
   glass: { mode: 'frost', hex: '#7b5cff', strength: 55 },        // none (truly clear) | frost | solid | rgb
   orgId: null,
   notify: true,
@@ -97,10 +102,10 @@ function createWidget() {
   }
 
   win = new BrowserWindow(opts);
-  win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font, collapsed: settings.collapsed ? '1' : '', locked: settings.locked ? '1' : '' } });
+  win.loadFile(path.join(__dirname, 'index.html'), { query: { material, font: settings.font, collapsed: settings.collapsed ? '1' : '', locked: settings.locked ? '1' : '', layout: settings.layout, ghost: settings.ghost ? '1' : '' } });
   win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(settings.scale));
-  win.once('ready-to-show', () => win.showInactive());
-  win.on('moved', () => { settings.bounds = win.getBounds(); saveSettings(); });
+  win.once('ready-to-show', () => { win.showInactive(); if (settings.ghost) win.setIgnoreMouseEvents(true, { forward: true }); });
+  win.on('moved', () => { if (!dock.hidden && !sliding) { snapToEdges(); settings.bounds = win.getBounds(); saveSettings(); } });
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); } });
 }
 
@@ -145,7 +150,18 @@ function buildTrayMenu() {
     { label: 'ย่อ / ขยายรายละเอียด', click: () => win && win.webContents.send('toggle-collapse') },
     { label: 'ล็อกตำแหน่ง (ลากไม่ได้)', type: 'checkbox', checked: settings.locked,
       click: (i) => { settings.locked = i.checked; saveSettings(); win && win.webContents.send('locked', i.checked); } },
-    { label: 'คีย์ลัด แสดง/ซ่อน: Ctrl+Alt+C', enabled: false },
+    { label: 'รูปแบบ', submenu: [['compact', 'กะทัดรัด — ชี้เมาส์แล้วค่อยกางออก'], ['full', 'เต็ม — แสดงแผงตลอด']].map(([v, label]) => ({
+      label, type: 'radio', checked: settings.layout === v,
+      click: () => { settings.layout = v; saveSettings(); win && win.webContents.send('layout', v); buildTrayMenu(); } })) },
+    { label: 'ดูดติดขอบจอ', type: 'checkbox', checked: settings.snap,
+      click: (i) => { settings.snap = i.checked; saveSettings(); snapToEdges(); } },
+    { label: 'แอบชิดขอบเมื่อไม่ใช้ (ต้องติดขอบซ้าย/ขวา)', type: 'checkbox', checked: settings.edgeHide,
+      click: (i) => { settings.edgeHide = i.checked; saveSettings(); snapToEdges(); if (!i.checked) showFromEdge(); } },
+    { label: 'โหมดผี — คลิกทะลุ (Ctrl+Alt+G)', type: 'checkbox', checked: settings.ghost, click: (i) => setGhost(i.checked) },
+    { label: 'จางลงเมื่อเมาส์อยู่ไกล', submenu: [[1, 'ไม่จาง'], [0.5, 'จางเหลือ 50%'], [0.3, 'จางเหลือ 30%'], [0.2, 'จางเหลือ 20%']].map(([v, label]) => ({
+      label, type: 'radio', checked: settings.fade === v,
+      click: () => { settings.fade = v; saveSettings(); buildTrayMenu(); } })) },
+    { label: 'คีย์ลัด: Ctrl+Alt+C แสดง/ซ่อน · Ctrl+Alt+G โหมดผี', enabled: false },
     { label: 'อยู่บนสุดเสมอ', type: 'checkbox', checked: settings.alwaysOnTop,
       click: (i) => { settings.alwaysOnTop = i.checked; saveSettings(); win && win.setAlwaysOnTop(i.checked); } },
     { label: 'เปิดพร้อม Windows', type: 'checkbox', checked: login.openAtLogin,
@@ -188,7 +204,6 @@ function applyScale() {
   if (!win) return;
   const b = win.getBounds();
   win.webContents.setZoomFactor(settings.scale);
-  win.setBounds({ ...b, width: Math.round(340 * settings.scale) });
   win.webContents.send('refit');
 }
 
@@ -538,7 +553,7 @@ ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMa
 ipcMain.on('set-color', (_e, c) => {
   if (!c || typeof c !== 'object') return;
   const hex = /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : settings.color.hex;
-  const mode = ['level', 'solid', 'rgb'].includes(c.mode) ? c.mode : 'level';
+  const mode = ['mono', 'level', 'solid', 'rgb'].includes(c.mode) ? c.mode : 'mono';
   const speed = Math.max(2, Math.min(30, Number(c.speed) || 8));
   settings.color = { mode, hex, speed, warn: c.warn !== false };
   saveSettings(); buildTrayMenu();
@@ -570,16 +585,120 @@ ipcMain.handle('set-session-key', (_e, k) => setSessionKey(k));
 ipcMain.on('hide', () => win && win.hide());
 ipcMain.on('menu', () => tray && tray.popUpContextMenu());
 ipcMain.on('open-usage', () => shell.openExternal(`${BASE}/settings/usage`));
-ipcMain.on('resize', (_e, h) => {
-  if (!win) return;
-  const b = win.getBounds(); const nh = Math.round(Math.max(100, Math.min(900, h * settings.scale)));
-  if (Math.abs(b.height - nh) > 1) {
-    // grow upward if near screen bottom so it stays anchored
-    const wa = screen.getDisplayMatching(b).workArea;
-    const nearBottom = b.y + b.height > wa.y + wa.height - 60;
-    win.setBounds({ ...b, height: nh, y: nearBottom ? b.y + b.height - nh : b.y });
-  }
+ipcMain.on('resize', (_e, size) => {
+  if (!win || sliding) return;
+  const cssW = typeof size === 'object' ? size.w : 340, cssH = typeof size === 'object' ? size.h : size;
+  const w = Math.round(Math.max(60, Math.min(700, cssW * settings.scale)));
+  const h = Math.round(Math.max(40, Math.min(1000, cssH * settings.scale)));
+  const b = dock.hidden ? dock.shown : win.getBounds();
+  if (Math.abs(b.width - w) <= 1 && Math.abs(b.height - h) <= 1) return;
+  const nb = anchoredBounds(b, w, h);
+  if (dock.hidden) { dock.shown = nb; win.setBounds(hiddenBounds(nb, dock.side)); }
+  else win.setBounds(nb);
 });
+
+// Keep the corner nearest the screen edge fixed when the widget grows or shrinks,
+// so expanding from the pill never jumps away from where you put it.
+function anchoredBounds(b, w, h) {
+  const wa = screen.getDisplayMatching(b).workArea;
+  const right = b.x + b.width / 2 > wa.x + wa.width / 2;
+  const bottom = b.y + b.height / 2 > wa.y + wa.height / 2;
+  let x = right ? b.x + b.width - w : b.x;
+  let y = bottom ? b.y + b.height - h : b.y;
+  x = Math.max(wa.x, Math.min(x, wa.x + wa.width - w));
+  y = Math.max(wa.y, Math.min(y, wa.y + wa.height - h));
+  if (win) win.webContents.send('anchor', { right, bottom });
+  return { x, y, width: w, height: h };
+}
+
+// ---------- magnetic snap, edge hiding, adaptive opacity ----------
+const SNAP = 28, GAP = 8, SLIVER = 6;
+const dock = { side: null, hidden: false, shown: null };
+let sliding = false, uiState = { expanded: false, busy: false };
+
+function isOuterEdge(b, side) {
+  // only hide into an edge that has no other monitor beyond it
+  const probe = { x: side === 'left' ? b.x - 20 : b.x + b.width + 20, y: Math.round(b.y + b.height / 2) };
+  return !screen.getAllDisplays().some(d => probe.x >= d.bounds.x && probe.x < d.bounds.x + d.bounds.width
+    && probe.y >= d.bounds.y && probe.y < d.bounds.y + d.bounds.height);
+}
+function snapToEdges() {
+  if (!win) return;
+  const b = win.getBounds(), wa = screen.getDisplayMatching(b).workArea;
+  let { x, y } = b; dock.side = null;
+  if (settings.snap) {
+    if (Math.abs(b.x - wa.x) < SNAP + GAP) { x = wa.x + GAP; }
+    else if (Math.abs(wa.x + wa.width - (b.x + b.width)) < SNAP + GAP) { x = wa.x + wa.width - b.width - GAP; }
+    if (Math.abs(b.y - wa.y) < SNAP + GAP) y = wa.y + GAP;
+    else if (Math.abs(wa.y + wa.height - (b.y + b.height)) < SNAP + GAP) y = wa.y + wa.height - b.height - GAP;
+    if (x !== b.x || y !== b.y) win.setBounds({ ...b, x, y });
+  }
+  const nb = win.getBounds();
+  if (Math.abs(nb.x - (wa.x + GAP)) <= 1) dock.side = 'left';
+  else if (Math.abs(nb.x + nb.width - (wa.x + wa.width - GAP)) <= 1) dock.side = 'right';
+  if (dock.side && !isOuterEdge(nb, dock.side)) dock.side = null;
+}
+function hiddenBounds(b, side) {
+  const wa = screen.getDisplayMatching(b).workArea;
+  return { ...b, x: side === 'left' ? wa.x - b.width + SLIVER : wa.x + wa.width - SLIVER };
+}
+function slideTo(target, done) {
+  sliding = true;
+  const from = win.getBounds(), steps = 12; let i = 0;
+  const tick = () => {
+    if (!win || win.isDestroyed()) return;
+    i++; const t = 1 - Math.pow(1 - i / steps, 3); // ease-out cubic
+    win.setBounds({ ...target, x: Math.round(from.x + (target.x - from.x) * t) });
+    if (i < steps) setTimeout(tick, 14); else { sliding = false; done && done(); }
+  };
+  tick();
+}
+function hideIntoEdge() {
+  if (!win || dock.hidden || !dock.side) return;
+  dock.shown = win.getBounds(); dock.hidden = true;
+  win.webContents.send('dock', { side: dock.side, hidden: true });
+  slideTo(hiddenBounds(dock.shown, dock.side));
+}
+function showFromEdge() {
+  if (!win || !dock.hidden) return;
+  dock.hidden = false;
+  win.webContents.send('dock', { side: dock.side, hidden: false });
+  slideTo(dock.shown);
+}
+
+let opacity = 1, awaySince = Date.now(), insideSince = 0, wasInside = false;
+function watchCursor() {
+  if (!win || win.isDestroyed() || !win.isVisible() || sliding) return;
+  const c = screen.getCursorScreenPoint(), b = win.getBounds(), now = Date.now();
+  const within = (m) => c.x >= b.x - m && c.x < b.x + b.width + m && c.y >= b.y - m && c.y < b.y + b.height + m;
+  const inside = within(0), near = within(70);
+  if (inside !== wasInside) { wasInside = inside; win.webContents.send('hover', inside); }
+  if (near) awaySince = now;
+
+  // edge hiding
+  if (settings.edgeHide && dock.side) {
+    if (dock.hidden && inside) showFromEdge();
+    else if (!dock.hidden && !near && !uiState.busy && now - awaySince > 1500) hideIntoEdge();
+  }
+  // adaptive opacity (ghost mode: see through it while the cursor is over it)
+  let target = 1;
+  if (settings.ghost && inside) target = 0.35;
+  else if (settings.fade < 1 && !near && !uiState.busy && !dock.hidden && now - awaySince > 2500) target = settings.fade;
+  const step = target > opacity ? 0.34 : 0.06; // come back fast, fade out slowly
+  const next = Math.abs(target - opacity) <= step ? target : opacity + Math.sign(target - opacity) * step;
+  if (next !== opacity) {
+    opacity = next; win.setOpacity(opacity);
+    win.webContents.send('paused', opacity < 0.6 || dock.hidden);
+  }
+}
+setInterval(watchCursor, 100);
+
+function setGhost(v) {
+  settings.ghost = v; saveSettings();
+  if (win) { win.setIgnoreMouseEvents(v, { forward: true }); win.webContents.send('ghost', v); }
+  buildTrayMenu();
+}
+ipcMain.on('ui-state', (_e, st) => { if (st && typeof st === 'object') uiState = { expanded: !!st.expanded, busy: !!st.busy }; });
 
 // ---------- boot ----------
 app.whenReady().then(() => {
@@ -595,6 +714,8 @@ app.whenReady().then(() => {
   require('electron').powerMonitor.on('resume', () => setTimeout(refresh, 4000));
   nativeTheme.on('updated', () => win && win.webContents.send('theme'));
   try { globalShortcut.register('CommandOrControl+Alt+C', toggleWidget); } catch {}
+  try { globalShortcut.register('CommandOrControl+Alt+G', () => setGhost(!settings.ghost)); } catch {}
+  setTimeout(snapToEdges, 1500);
 });
 app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch {} });
 app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });

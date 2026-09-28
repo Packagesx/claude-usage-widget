@@ -457,7 +457,7 @@ html[data-locked="1"] .glass { -webkit-app-region: no-drag; }
 .burn .bf { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-3); margin-top: -2px; }
 
 /* ---------------- hot orb breathes red ---------------- */
-.orb[data-level="hot"] { animation: hotglow 2.4s ease-in-out infinite; }
+.orb[data-level="hot"] { animation: hotglow 3.6s ease-in-out infinite; }
 @keyframes hotglow {
   50% { box-shadow: inset 0 2px 1px var(--well-edge), inset 0 -3px 8px var(--well-shade), 0 0 0 3px rgba(255,59,92,.25), 0 0 26px 2px rgba(255,59,92,.45); }
 }
@@ -468,3 +468,83 @@ html[data-locked="1"] .glass { -webkit-app-region: no-drag; }
   html:not([data-glass="none"]) .burn .bv.runout { color: #b3123a; }
   html:not([data-glass="none"]) .burn .bv.safe { color: #137a3e; }
 }
+
+/* =====================================================================
+   v2 — compact pill, monochrome default, soft alerts, dock & ghost
+   ===================================================================== */
+.glass { width: 340px; }
+
+/* ---------- compact pill (progressive disclosure) ---------- */
+.pill { display: none; }
+html.pillmode .glass { width: max-content; padding: 7px 14px 7px 8px; }
+html.pillmode :is(.bar, .view, .foot) { display: none !important; }
+html.pillmode .pill { display: flex; align-items: center; gap: 14px; -webkit-app-region: no-drag; animation: pillIn .24s cubic-bezier(.16,1,.3,1); }
+@keyframes pillIn { from { opacity: 0; transform: scale(.94); } }
+.pseg { --ring: #4aa3ff; display: flex; align-items: center; gap: 8px; }
+.pseg[data-level="warn"] { --ring: #ff9a3c; }
+.pseg[data-level="hot"]  { --ring: #ff3b5c; }
+.rwrap { position: relative; width: 38px; height: 38px; flex: none; }
+.ring { width: 38px; height: 38px; transform: rotate(-90deg); overflow: visible; }
+.ring .track { fill: none; stroke: var(--well-edge); stroke-width: 3.2; opacity: .45; }
+.ring .arc { fill: none; stroke: var(--ring); stroke-width: 3.6; stroke-linecap: round;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ring) 60%, transparent)); }
+.rn { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+.pl { display: flex; flex-direction: column; line-height: 1.2; white-space: nowrap; }
+.pl > span { font-size: 11.5px; font-weight: 600; }
+.pl em { font-style: normal; font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+html[data-glass="none"] .pill { text-shadow: 0 1px 2px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.35); }
+
+/* expand / collapse motion */
+html.pop :is(.bar, .view, .foot) { animation: panelIn .28s cubic-bezier(.16,1,.3,1); }
+html.shrink :is(.bar, .view, .foot) { animation: panelOut .15s ease-in forwards; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(var(--dy, -4px)) scale(.985); } }
+@keyframes panelOut { to { opacity: 0; transform: translateY(var(--dy, -4px)) scale(.985); } }
+html[data-ay="b"] { --dy: 4px; }
+html[data-layout="compact"] .chev { display: none; }
+html[data-layout="compact"] .details { grid-template-rows: 1fr !important; opacity: 1 !important; }
+html[data-layout="compact"].collapsed .foot { display: flex; }
+
+/* ---------- monochrome default: colour only when it matters ---------- */
+html[data-color="mono"] :is(.orb, .capsule) { --c1: rgba(255,255,255,.95); --c2: rgba(188,196,210,.82); }
+@media (prefers-color-scheme: light) {
+  html[data-color="mono"]:not([data-glass="none"]) :is(.orb, .capsule) { --c1: #b9c0cc; --c2: #6e7788; }
+}
+html[data-color="mono"] :is(.orb, .capsule)[data-level="mid"]  { --c1: #ffe38f; --c2: #f2b705; }
+html[data-color="mono"] :is(.orb, .capsule)[data-level="warn"] { --c1: #ffc585; --c2: #ff8a1f; }
+html[data-color="mono"] :is(.orb, .capsule)[data-level="hot"]  { --c1: #ff9a8a; --c2: #ff3b5c; }
+/* white liquid needs dark digits */
+@media (prefers-color-scheme: dark) {
+  html[data-color="mono"] .orb:is([data-level="ok"]) .num.light { color: #1b1f27; text-shadow: none; }
+}
+html[data-color="mono"][data-glass="none"] .orb:is([data-level="ok"]) .num.light { color: #1b1f27; text-shadow: none; }
+html[data-color="mono"] .pseg { --ring: var(--ink); }
+html[data-color="mono"] .pseg[data-level="mid"]  { --ring: #f5c542; }
+html[data-color="mono"] .pseg[data-level="warn"] { --ring: #ff9a3c; }
+html[data-color="mono"] .pseg[data-level="hot"]  { --ring: #ff4d5e; }
+html:is([data-color="solid"], [data-color="rgb"]) .pseg { --ring: var(--u2); }
+html[data-warn="on"]:is([data-color="solid"], [data-color="rgb"]) .pseg[data-level="hot"] { --ring: #ff3b5c; }
+html[data-color="rgb"] .ring .arc { animation: hue var(--rgb-speed) linear infinite; }
+html[data-color="mono"] .spark .line { stroke: var(--ink); }
+html[data-color="mono"] .spark .now { fill: var(--ink); }
+html[data-color="mono"] #btn-color svg { fill: var(--ink); opacity: .8; }
+
+/* ---------- soft breathing alert around the frame (no blinking, no popups) ---------- */
+.glass::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 4; opacity: 0;
+  box-shadow: inset 0 0 0 1px var(--alert, transparent), inset 0 0 22px 1px var(--alert, transparent); }
+html[data-alert="warn"] { --alert: rgba(255,170,40,.75); }
+html[data-alert="hot"]  { --alert: rgba(255,59,92,.8); }
+html[data-alert] .glass::after { animation: breathe 3.6s ease-in-out infinite; }
+html[data-alert=""] .glass::after { animation: none; }
+@keyframes breathe { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+
+/* ---------- docked into the screen edge: a thin handle stays visible ---------- */
+.dockbar { display: none; position: absolute; top: 18%; bottom: 18%; width: 3px; border-radius: 3px; z-index: 6;
+  background: var(--ink-2); box-shadow: 0 0 8px var(--ink-3); }
+html[data-dock="left"] .dockbar { display: block; right: 1px; }
+html[data-dock="right"] .dockbar { display: block; left: 1px; }
+html[data-alert="warn"] .dockbar { background: #ffb02e; box-shadow: 0 0 8px #ffb02e; }
+html[data-alert="hot"] .dockbar { background: #ff3b5c; box-shadow: 0 0 8px #ff3b5c; }
+
+/* ---------- idle / hidden: stop all motion to save battery ---------- */
+html.paused *, html.paused *::before, html.paused *::after { animation-play-state: paused !important; }
