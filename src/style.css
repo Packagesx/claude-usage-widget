@@ -266,7 +266,7 @@ body.loading #btn-refresh svg { animation: spin .9s linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   /* RGB mode is an explicit opt-in, so it keeps animating */
-  :root:not([data-color="rgb"]) *, :root:not([data-color="rgb"]) *::before, :root:not([data-color="rgb"]) *::after {
+  :root:not([data-color="rgb"]):not([data-glass="rgb"]) *, :root:not([data-color="rgb"]):not([data-glass="rgb"]) *::before, :root:not([data-color="rgb"]):not([data-glass="rgb"]) *::after {
     animation: none !important; transition: none !important; }
 }
 
@@ -276,29 +276,67 @@ body.loading #btn-refresh svg { animation: spin .9s linear infinite; }
 .pill.wide { grid-column: 1 / -1; }
 .auth p b { color: var(--ink); }
 
-/* ---------------- colour modes ---------------- */
+/* ---------------- liquid colour modes ---------------- */
 @property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-:root { --u1: #8fb4ff; --u2: #3a7bff; --rgb-speed: 8s; }
+:root { --u1: #8fb4ff; --u2: #3a7bff; --rgb-speed: 8s; --g: #7b5cff; --gs: .55; }
 html:is([data-color="solid"], [data-color="rgb"]) :is(.orb, .capsule) { --c1: var(--u1); --c2: var(--u2); }
 html[data-color="rgb"] :is(.level, .capsule i) { animation: hue var(--rgb-speed) linear infinite; }
 html[data-color="rgb"] .level .wave.front { animation: slide 4.5s linear infinite; }
 html[data-color="rgb"] .level .wave.back  { animation: slide 7s linear infinite reverse; }
 @keyframes hue { to { filter: hue-rotate(360deg); } }
-/* keep the red warning even in custom / RGB modes */
 html[data-warn="on"] :is(.orb, .capsule)[data-level="hot"] { --c1: #ff9a8a; --c2: #ff3b5c; }
 html[data-warn="on"][data-color="rgb"] .orb[data-level="hot"] .level,
 html[data-warn="on"][data-color="rgb"] .capsule[data-level="hot"] i { animation: none; filter: none; }
-/* RGB rim light */
-html[data-color="rgb"] .edge {
-  padding: 1.5px;
-  background: conic-gradient(from var(--ang), #ff4d6d, #ffb84d, #f9f871, #4dff9a, #4dd8ff, #6d7bff, #d46dff, #ff4d6d);
-  opacity: .85; animation: spinrim var(--rgb-speed) linear infinite;
+
+/* ---------------- glass tint (Liquid Glass colour) ---------------- */
+.gtint, .rgbglow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; opacity: 0; transition: opacity .4s; }
+html[data-glass="solid"] .gtint {
+  opacity: 1;
+  background:
+    radial-gradient(120% 70% at 20% 0%, color-mix(in srgb, white 30%, var(--g) calc(var(--gs) * 100%)) 0%, transparent 70%),
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--g) calc(var(--gs) * 70%), transparent) 0%,
+      color-mix(in srgb, var(--g) calc(var(--gs) * 45%), transparent) 55%,
+      color-mix(in srgb, var(--g) calc(var(--gs) * 80%), transparent) 100%);
+  box-shadow: inset 0 0 40px -6px color-mix(in srgb, var(--g) calc(var(--gs) * 90%), transparent);
 }
+/* tinted rim: the edge picks up the glass colour like a lit glass border */
+html[data-glass="solid"] .edge { background: linear-gradient(135deg,
+  color-mix(in srgb, white 70%, var(--g)), transparent 38%, transparent 62%, color-mix(in srgb, var(--g) 60%, transparent)); }
+html[data-glass="solid"] .specular { background: radial-gradient(60% 50% at 30% 40%, color-mix(in srgb, white 70%, var(--g) 30%), transparent 70%); opacity: .5; }
+/* RGB glass: soft, blurred rainbow light moving *inside* the glass */
+html[data-glass="rgb"] .rgbglow { opacity: var(--gs); overflow: hidden; }
+.rgbglow i { position: absolute; inset: -45%; filter: blur(38px);
+  background: conic-gradient(from var(--ang), #ff4d6d, #ffb84d, #f9f871, #4dff9a, #4dd8ff, #6d7bff, #d46dff, #ff4d6d); }
+html[data-glass="rgb"] .rgbglow i { animation: spinrim var(--rgb-speed) linear infinite; }
 @keyframes spinrim { to { --ang: 360deg; } }
+@media (prefers-color-scheme: dark) { html[data-glass="rgb"] .rgbglow { opacity: calc(var(--gs) * .8); } }
+
+
+
+/* ---------------- per-model share ---------------- */
+.models { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+.models .mh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.models .mh b { font-size: 12px; font-weight: 600; }
+.models .mh em { font-style: normal; font-size: 10.5px; color: var(--ink-3); text-align: right; }
+.stack { display: flex; height: 10px; border-radius: 999px; overflow: hidden; gap: 2px; padding: 1px;
+  background: var(--well); box-shadow: inset 0 1px 2px var(--well-shade), inset 0 -1px 0 var(--well-edge); }
+.stack i { display: block; border-radius: 999px; min-width: 4px;
+  background: linear-gradient(180deg, color-mix(in srgb, white 35%, var(--m)), var(--m));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.legend span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--m); box-shadow: 0 0 6px var(--m); }
+.legend small { color: var(--ink-3); font-size: 10.5px; }
+.models .none { font-size: 11px; color: var(--ink-3); }
 
 /* ---------------- colour panel ---------------- */
 .colorp { display: flex; flex-direction: column; gap: 10px; -webkit-app-region: no-drag; }
-.colorp h3 { font-size: 13.5px; font-weight: 600; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tabs button { height: 32px; border-radius: 10px; font-weight: 600; font-size: 12.5px; color: var(--ink-2);
+  background: transparent; box-shadow: inset 0 0 0 1px var(--edge-lo); transition: background .2s, color .2s; }
+.tabs button[aria-selected="true"] { color: var(--ink); background: var(--btn-hover);
+  box-shadow: inset 0 1px 0 var(--well-edge), 0 3px 10px -4px rgba(0,0,0,.35); }
 .colorp .hint { font-size: 11px; color: var(--ink-3); margin-top: -4px; min-height: 1em; }
 .seg { display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; border-radius: 999px; background: var(--well);
   box-shadow: inset 0 1px 2px var(--well-shade), inset 0 -1px 0 var(--well-edge); }
@@ -307,7 +345,7 @@ html[data-color="rgb"] .edge {
   box-shadow: inset 0 1px 0 var(--well-edge), 0 2px 6px -2px rgba(0,0,0,.3); }
 .seg button[data-mode="rgb"][aria-checked="true"] {
   background: linear-gradient(90deg, #ff4d6d55, #ffb84d55, #4dff9a55, #4dd8ff55, #d46dff55); }
-.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; transition: opacity .2s; }
 .swatch { position: relative; aspect-ratio: 1; border-radius: 50%; cursor: pointer;
   background: radial-gradient(circle at 35% 30%, var(--s1), var(--s2) 70%);
   box-shadow: inset 0 1px 1px rgba(255,255,255,.6), inset 0 -2px 3px rgba(0,0,0,.2); transition: transform .15s; }
@@ -317,13 +355,13 @@ html[data-color="rgb"] .edge {
 .swatch.custom::after { content: "+"; position: absolute; inset: 0; display: grid; place-items: center;
   font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; }
 .swatch.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: 0; padding: 0; }
-.colorp.level-mode .swatches { opacity: .35; pointer-events: none; }
-.speed { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
-.speed em { font-style: normal; color: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
+.colorp.dim-swatches .swatches { opacity: .35; pointer-events: none; }
+.speed { display: grid; grid-template-columns: 78px 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
+.speed em { font-style: normal; color: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
 .speed input { accent-color: var(--accent); }
 .check { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-2); cursor: pointer; }
 .check input { accent-color: var(--accent); width: 15px; height: 15px; }
 #btn-color-done { align-self: stretch; margin-top: 2px; }
 #btn-color svg { fill: var(--ink); stroke: none; opacity: .8; }
-html[data-color="rgb"] #btn-color svg { fill: url(#rgbfill); opacity: 1; }
 html[data-color="solid"] #btn-color svg { fill: var(--u2); opacity: 1; }
+html[data-color="rgb"] #btn-color svg { fill: url(#rgbfill); opacity: 1; }

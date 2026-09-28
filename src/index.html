@@ -22,6 +22,8 @@
     <div class="edge" aria-hidden="true"></div>
     <div class="specular" aria-hidden="true"></div>
     <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="gtint" aria-hidden="true"></div>
+    <div class="rgbglow" aria-hidden="true"><i></i></div>
 
     <header class="bar">
       <div class="brand">
@@ -51,28 +53,25 @@
     <section id="view-usage" class="view">
       <div class="orbs" id="orbs"></div>
       <div class="rows" id="rows"></div>
+      <div class="models" id="models" hidden></div>
     </section>
 
-    <!-- color panel -->
+    <!-- colour panel -->
     <section id="view-color" class="view colorp" hidden>
-      <h3>สีของเหลว</h3>
-      <div class="seg" role="radiogroup" aria-label="โหมดสี">
-        <button type="button" data-mode="level" role="radio">ตามระดับ</button>
-        <button type="button" data-mode="solid" role="radio">สีเดียว</button>
-        <button type="button" data-mode="rgb" role="radio">RGB</button>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" data-tab="liquid">💧 ของเหลว</button>
+        <button type="button" role="tab" data-tab="glass">🔮 กระจก</button>
       </div>
+      <div class="seg" id="seg" role="radiogroup" aria-label="โหมดสี"></div>
       <p class="hint" id="mode-hint"></p>
       <div class="swatches" id="swatches">
-        <label class="swatch custom" title="เลือกสีเอง">
-          <input type="color" id="color-input" value="#3a7bff">
-        </label>
+        <label class="swatch custom" title="เลือกสีเอง"><input type="color" id="color-input" value="#3a7bff"></label>
       </div>
-      <label class="speed" id="speed-row">
-        <span>ความเร็ว RGB</span>
-        <input type="range" id="speed" min="2" max="30" step="1" value="8">
-        <em id="speed-val"></em>
-      </label>
-      <label class="check"><input type="checkbox" id="warn" checked> <span>เปลี่ยนเป็นสีแดงเมื่อใช้เกิน 90%</span></label>
+      <label class="speed" id="strength-row"><span>ความเข้มสี</span>
+        <input type="range" id="strength" min="10" max="100" step="5" value="55"><em id="strength-val"></em></label>
+      <label class="speed" id="speed-row"><span>ความเร็ว RGB</span>
+        <input type="range" id="speed" min="2" max="30" step="1" value="8"><em id="speed-val"></em></label>
+      <label class="check" id="warn-row"><input type="checkbox" id="warn" checked> <span>เปลี่ยนเป็นสีแดงเมื่อใช้เกิน 90%</span></label>
       <button class="pill primary" id="btn-color-done" type="button">เสร็จ</button>
     </section>
 

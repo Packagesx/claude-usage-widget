@@ -42,9 +42,9 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
 
 - Liquid-glass orbs whose fill level shows usage. The colour changes from blue to amber to red as you get close to a limit.
 - A countdown to each reset, in Thai.
-- Per-model weekly limits (Opus, Sonnet) appear only when claude.ai reports them for your plan. Pro accounts usually get just the session and weekly limits.
+- Per-model weekly limits (Opus, Sonnet) appear only when claude.ai reports them for your plan. When your plan has none (e.g. Pro), the widget shows **each model's share of your usage** instead, read from Claude Code's local logs (`~/.claude/projects`). That share covers Claude Code on this PC only, not claude.ai chat.
 - Claude Code cloud-session credits (the `iguana_necktie` field in the API) are shown as dollars remaining, with the expiry date.
-- Other limits that claude.ai returns under internal codenames (e.g. `nimbus_quill`) are hidden by default. You can show them from the tray menu.
+- Limits that claude.ai returns under unannounced internal codenames (e.g. `nimbus_quill`) are not shown.
 - Tray menu with these settings:
   - Always on top
   - Start with Windows
@@ -53,11 +53,10 @@ Your session is stored **only on your PC**, in the app's own browser profile. It
   - Glass material: Acrylic, Mica or Clear
   - Font: Anuphan, IBM Plex Sans Thai, Prompt or Noto Sans Thai, all bundled with the app
   - Organization switcher, if you belong to more than one
-- Liquid colour modes, set from the droplet button in the header:
-  - **ตามระดับ (By level):** blue → amber → red as usage rises (default)
-  - **สีเดียว (Single colour):** 7 presets, or pick any colour
-  - **RGB:** a rainbow cycle with a glowing rim, at an adjustable speed
-  - An optional red warning above 90% usage, in any mode
+- Colours are customisable from the droplet button, with separate settings for the **liquid** and the **glass**:
+  - Liquid: **By level** (blue → amber → red, the default), **Single colour** (7 presets or any custom colour), or **RGB** (a rainbow cycle)
+  - Glass: **Clear**, **Tinted** (a Liquid Glass-style colour tint with adjustable strength), or **RGB** (a soft, blurred rainbow light moving inside the glass)
+  - An optional red warning above 90% usage
 - Follows the Windows light/dark theme.
 - Remembers where you placed it on screen.
 

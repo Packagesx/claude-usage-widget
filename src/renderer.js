@@ -9,19 +9,19 @@
     const mock = params.get('mock') || 'ok';
     const h = 36e5, now = Date.now();
     const data = {
-      ok: { state: 'ok', org: 'Max · you@example.com', updatedAt: now, items: [
+      ok: { state: 'ok', org: 'Pro · you@example.com', updatedAt: now,
+        models: { total: 2.6e6, models: [{ name: 'Opus', tok: 1.6e6, pct: 61.5 }, { name: 'Sonnet', tok: 0.9e6, pct: 34.6 }, { name: 'Haiku', tok: 1e5, pct: 3.9 }] },
+        items: [
         { key: 'five_hour', th: 'เซสชันนี้', sub: 'รอบ 5 ชั่วโมง', pct: 42, resetsAt: new Date(now + 2.3 * h).toISOString() },
         { key: 'seven_day', th: 'สัปดาห์นี้', sub: 'ทุกโมเดล', pct: 83, resetsAt: new Date(now + 76 * h).toISOString() },
-        { key: 'seven_day_opus', th: 'Opus', sub: 'โควตารายสัปดาห์', pct: 97, resetsAt: new Date(now + 76 * h).toISOString() },
-        { key: 'seven_day_sonnet', th: 'Sonnet', sub: 'โควตารายสัปดาห์', pct: 18, resetsAt: new Date(now + 76 * h).toISOString() },
         { key: 'iguana_necktie', kind: 'credit', th: 'เครดิต Cloud', sub: 'Claude Code บนคลาวด์', pct: 33, limit: 100, used: 33, left: 67, resetsAt: new Date(now + 38 * 24 * h).toISOString() },
       ] },
       auth: { state: 'auth' },
     }[mock];
     let cb = () => {};
     return {
-      getInitial: async () => ({ payload: null, color: { mode: params.get('color') || 'level', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
-      setColor() {},
+      getInitial: async () => ({ payload: null, glass: { mode: params.get('glass') || 'none', hex: params.get('ghex') ? '#' + params.get('ghex') : '#7b5cff', strength: Number(params.get('gs') || 55) }, color: { mode: params.get('color') || 'level', hex: params.get('hex') ? '#' + params.get('hex') : '#3a7bff', speed: 8, warn: true } }),
+      setColor() {}, setGlass() {},
       onUsage: (f) => { cb = f; setTimeout(() => f(data), 300); },
       refresh: () => { cb({ ...data, state: 'loading' }); setTimeout(() => cb({ ...data, updatedAt: Date.now() }), 600); },
       login() {}, hide() {}, menu() {}, openUsage() {}, resize() {},
@@ -117,6 +117,20 @@
     tickResets();
   }
 
+  const MODEL_COLORS = { Opus: '#b48cff', Sonnet: '#ff9a6b', Haiku: '#39d3b0' };
+  const fmtTok = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
+  function renderModels(m) {
+    const el = $('#models');
+    if (!m) { el.hidden = true; return; }
+    el.hidden = false;
+    const head = `<div class="mh"><b>สัดส่วนการใช้ตามโมเดล</b><em>Claude Code ในเครื่องนี้ · สัปดาห์นี้</em></div>`;
+    if (!m.models.length) { el.innerHTML = head + '<div class="none">ยังไม่มีการใช้ Claude Code ในสัปดาห์นี้</div>'; return; }
+    const col = (n) => MODEL_COLORS[n] || '#9aa4b8';
+    el.innerHTML = head +
+      `<div class="stack">${m.models.map((x) => `<i style="--m:${col(x.name)};flex:${Math.max(x.pct, 1.5)}" title="${esc(x.name)} ${x.pct.toFixed(1)}%"></i>`).join('')}</div>` +
+      `<div class="legend">${m.models.map((x) => `<span style="--m:${col(x.name)}">${esc(x.name)} <b>${Math.round(x.pct)}%</b> <small>${fmtTok(x.tok)}</small></span>`).join('')}</div>`;
+  }
+
   function skeleton() {
     $('#orbs').innerHTML = [0, 1].map(() => `
       <div class="gauge"><div class="orb skeleton"><div class="liquid"></div><div class="shine"></div></div>
@@ -143,6 +157,7 @@
     else if (p.state === 'loading' || !p.items) skeleton();
     else { $('#orbs').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-2);text-align:center">ไม่มีข้อมูล usage สำหรับบัญชีนี้</p>'; }
 
+    renderModels(p.state === 'ok' || p.models ? p.models : null);
     if (p.org) $('#org').textContent = p.org;
     const u = $('#updated');
     if (p.state === 'error') {
@@ -182,9 +197,19 @@
   $('#key-form').onsubmit = (e) => { e.preventDefault(); submitKey($('#key-input').value); };
   api.onFont && api.onFont((f) => { document.documentElement.dataset.font = f; fit(); });
   api.onUsage(render);
-  // ---- colour customisation ----
+  // ---- colour customisation: liquid + glass ----
   const PRESETS = ['#3a7bff', '#7b5cff', '#ff4fa3', '#ff5a5a', '#ff9a3c', '#d9774f', '#1fc8a0'];
   let color = { mode: 'level', hex: '#3a7bff', speed: 8, warn: true };
+  let glass = { mode: 'none', hex: '#7b5cff', strength: 55 };
+  let tab = 'liquid';
+  const MODES = {
+    liquid: [['level', 'ตามระดับ'], ['solid', 'สีเดียว'], ['rgb', 'RGB']],
+    glass: [['none', 'ใส'], ['solid', 'ใส่สี'], ['rgb', 'RGB']],
+  };
+  const HINTS = {
+    liquid: { level: 'ฟ้า → ส้ม → แดง ตาม % ที่ใช้', solid: 'เลือกสีด้านล่าง หรือกด + เลือกสีเอง', rgb: 'ของเหลวไล่สีรุ้งวนตลอดเวลา' },
+    glass: { none: 'กระจกใสตามพื้นหลัง', solid: 'กระจกย้อมสีแบบ Liquid Glass', rgb: 'แสงรุ้งเบลอๆ ลอยอยู่ข้างในกระจก' },
+  };
   function hexToHsl(hex) {
     const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
@@ -194,39 +219,54 @@
     return [h, s * 100, l * 100];
   }
   const hsl = (h, s, l) => `hsl(${h.toFixed(0)} ${Math.min(100, s).toFixed(0)}% ${Math.max(0, Math.min(100, l)).toFixed(0)}%)`;
+  const cur = () => (tab === 'liquid' ? color : glass);
+
   function applyColor() {
     const root = document.documentElement;
     root.dataset.color = color.mode;
     root.dataset.warn = color.warn ? 'on' : 'off';
+    root.dataset.glass = glass.mode;
     const [h, s, l] = hexToHsl(color.mode === 'rgb' ? '#ff4d6d' : color.hex);
     root.style.setProperty('--u2', hsl(h, s, Math.min(l, 58)));
     root.style.setProperty('--u1', hsl(h, s * 0.95, Math.min(l, 58) + 22));
     root.style.setProperty('--rgb-speed', `${color.speed}s`);
-    // panel state
-    document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === color.mode)));
-    document.querySelectorAll('.swatch[data-hex]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.hex.toLowerCase() === color.hex.toLowerCase())));
-    $('#color-input').value = color.hex;
+    root.style.setProperty('--g', glass.hex);
+    root.style.setProperty('--gs', String(glass.strength / 100));
+
+    // panel
+    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    const c = cur();
+    $('#seg').innerHTML = MODES[tab].map(([m, t]) => `<button type="button" role="radio" data-mode="${m}" aria-checked="${c.mode === m}">${t}</button>`).join('');
+    $('#seg').querySelectorAll('button').forEach((btn) => (btn.onclick = () => { cur().mode = btn.dataset.mode; save(); }));
+    $('#mode-hint').textContent = HINTS[tab][c.mode];
+    document.querySelectorAll('.swatch[data-hex]').forEach((b) => b.setAttribute('aria-checked', String(c.mode === 'solid' && b.dataset.hex.toLowerCase() === c.hex.toLowerCase())));
+    $('#color-input').value = c.hex;
+    $('#view-color').classList.toggle('dim-swatches', c.mode === 'rgb' || (tab === 'liquid' && c.mode === 'level'));
+    $('#strength-row').hidden = tab !== 'glass' || glass.mode === 'none';
+    $('#strength').value = glass.strength; $('#strength-val').textContent = `${glass.strength}%`;
+    $('#speed-row').hidden = c.mode !== 'rgb';
     $('#speed').value = color.speed; $('#speed-val').textContent = `${color.speed} วิ`;
+    $('#warn-row').hidden = tab !== 'liquid' || color.mode === 'level';
     $('#warn').checked = color.warn;
-    $('#speed-row').hidden = color.mode !== 'rgb';
-    $('#view-color').classList.toggle('level-mode', color.mode !== 'solid');
-    $('#mode-hint').textContent = { level: 'ฟ้า → ส้ม → แดง ตาม % ที่ใช้', solid: 'เลือกสีจากด้านล่าง หรือกด + เพื่อเลือกสีเอง', rgb: 'ไล่สีรุ้งวนตลอดเวลา + ขอบเรืองแสง' }[color.mode];
     fit();
   }
-  const saveColor = () => { applyColor(); api.setColor && api.setColor(color); };
+  function save() { applyColor(); api.setColor && api.setColor(color); api.setGlass && api.setGlass(glass); }
+
   PRESETS.forEach((hex) => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'swatch'; b.dataset.hex = hex; b.title = hex; b.setAttribute('role', 'radio');
     const [h, s, l] = hexToHsl(hex); b.style.setProperty('--s1', hsl(h, s, l + 22)); b.style.setProperty('--s2', hex);
-    b.onclick = () => { color.hex = hex; color.mode = 'solid'; saveColor(); };
+    b.onclick = () => { const c = cur(); c.hex = hex; c.mode = 'solid'; save(); };
     $('#swatches').insertBefore(b, $('.swatch.custom'));
   });
-  $('#color-input').oninput = (e) => { color.hex = e.target.value; color.mode = 'solid'; applyColor(); };
-  $('#color-input').onchange = () => saveColor();
-  document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { color.mode = b.dataset.mode; saveColor(); }));
+  $('#color-input').oninput = (e) => { const c = cur(); c.hex = e.target.value; c.mode = 'solid'; applyColor(); };
+  $('#color-input').onchange = () => save();
   $('#speed').oninput = (e) => { color.speed = Number(e.target.value); applyColor(); };
-  $('#speed').onchange = () => saveColor();
-  $('#warn').onchange = (e) => { color.warn = e.target.checked; saveColor(); };
+  $('#speed').onchange = () => save();
+  $('#strength').oninput = (e) => { glass.strength = Number(e.target.value); applyColor(); };
+  $('#strength').onchange = () => save();
+  $('#warn').onchange = (e) => { color.warn = e.target.checked; save(); };
+  document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; applyColor(); }));
 
   var panelOpen = false, prevView = null; // var: render() may read these early
   function toggleColorPanel(open = !panelOpen) {
@@ -243,10 +283,11 @@
   $('#btn-color').onclick = () => toggleColorPanel();
   $('#btn-color-done').onclick = () => toggleColorPanel(false);
   api.onOpenColor && api.onOpenColor(() => toggleColorPanel(true));
-  if (params.get('panel')) setTimeout(() => toggleColorPanel(true), 50);
+  if (params.get('panel')) { tab = params.get('panel') === 'glass' ? 'glass' : 'liquid'; setTimeout(() => toggleColorPanel(true), 50); }
 
   api.getInitial().then((r) => {
     if (r && r.color) color = { ...color, ...r.color };
+    if (r && r.glass) glass = { ...glass, ...r.glass };
     applyColor();
     if (r && r.payload) render(r.payload); else skeleton();
   });

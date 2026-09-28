@@ -4,6 +4,7 @@ const {
   nativeImage, Notification, shell, nativeTheme,
 } = require('electron');
 const path = require('path');
+const { modelShare } = require('./models');
 const fs = require('fs');
 
 const PARTITION = 'persist:claude';
@@ -24,15 +25,16 @@ const DEFAULTS = {
   refreshMinutes: 2,
   material: 'acrylic',        // acrylic | mica | clear
   font: 'anuphan',            // anuphan | plex | prompt | noto
-  showOther: false,           // show quotas with unrecognised (codename) keys
-  color: { mode: 'level', hex: '#3a7bff', speed: 8, warn: true }, // level | solid | rgb
+  color: { mode: 'level', hex: '#3a7bff', speed: 8, warn: true }, // liquid: level | solid | rgb
+  glass: { mode: 'none', hex: '#7b5cff', strength: 55 },         // glass tint: none | solid | rgb
   orgId: null,
   notify: true,
   notified: {},               // { key: resets_at|threshold }
 };
 let settings = { ...DEFAULTS };
 function loadSettings() {
-  try { settings = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(settingsPath(), 'utf8')) }; }
+  try { const f = JSON.parse(fs.readFileSync(settingsPath(), 'utf8'));
+    settings = { ...DEFAULTS, ...f, color: { ...DEFAULTS.color, ...(f.color || {}) }, glass: { ...DEFAULTS.glass, ...(f.glass || {}) } }; }
   catch { settings = { ...DEFAULTS }; }
 }
 function saveSettings() {
@@ -136,8 +138,6 @@ function buildTrayMenu() {
       click: (i) => { app.setLoginItemSettings({ openAtLogin: i.checked }); } },
     { label: 'แจ้งเตือนเมื่อใช้ถึง 80% / 95%', type: 'checkbox', checked: settings.notify,
       click: (i) => { settings.notify = i.checked; saveSettings(); } },
-    { label: 'แสดงโควตาอื่นที่ claude.ai ไม่ได้ตั้งชื่อ', type: 'checkbox', checked: settings.showOther,
-      click: (i) => { settings.showOther = i.checked; saveSettings(); refresh(); } },
     { label: 'ความถี่รีเฟรช', submenu: [1, 2, 5, 10].map(interval) },
     { label: 'สีของเหลว / RGB…', click: () => { if (win) { win.show(); win.webContents.send('open-color'); } } },
     { label: 'ฟอนต์', submenu: [
@@ -252,7 +252,7 @@ function normalize(usage) {
     const u = v.utilization;
     if (typeof u !== 'number') continue;
     if (key === 'extra_usage' && v.is_enabled === false) continue;
-    const meta = LABELS[key] || (settings.showOther ? { th: 'โควตาอื่น', sub: key.replace(/_/g, ' ') } : null);
+    const meta = LABELS[key]; // unknown codename quotas (e.g. nimbus_quill) are not shown
     if (!meta) continue;
     items.push({ key, pct: Math.max(0, Math.min(100, u)), resetsAt: v.resets_at || null, ...meta });
   }
@@ -309,7 +309,15 @@ async function refresh() {
     const usage = await apiGet(`/api/organizations/${orgId}/usage`);
     const items = normalize(usage);
     const org = orgs.find(o => o.uuid === orgId);
-    send({ state: 'ok', items, org: orgLabel(org), updatedAt: Date.now() });
+    // Per-model: use real per-model quotas if the plan has them, otherwise
+    // fall back to the share of Claude Code usage per model on this PC.
+    let models = null;
+    if (!items.some(i => /^seven_day_(opus|sonnet)$/.test(i.key))) {
+      const wk = items.find(i => i.key === 'seven_day');
+      const since = wk && wk.resetsAt ? Date.parse(wk.resetsAt) - 7 * 864e5 : Date.now() - 7 * 864e5;
+      try { models = await modelShare(since); } catch { models = null; }
+    }
+    send({ state: 'ok', items, models, org: orgLabel(org), updatedAt: Date.now() });
     maybeNotify(items);
     const five = items.find(i => i.key === 'five_hour');
     tray && tray.setToolTip(`Claude Usage${five ? ` — Session ${Math.round(five.pct)}%` : ''}`);
@@ -416,7 +424,7 @@ async function signOut() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: settings.material, color: settings.color }));
+ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: settings.material, color: settings.color, glass: settings.glass }));
 ipcMain.on('set-color', (_e, c) => {
   if (!c || typeof c !== 'object') return;
   const hex = /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex : settings.color.hex;
@@ -424,6 +432,15 @@ ipcMain.on('set-color', (_e, c) => {
   const speed = Math.max(2, Math.min(30, Number(c.speed) || 8));
   settings.color = { mode, hex, speed, warn: c.warn !== false };
   saveSettings(); buildTrayMenu();
+});
+ipcMain.on('set-glass', (_e, g) => {
+  if (!g || typeof g !== 'object') return;
+  settings.glass = {
+    mode: ['none', 'solid', 'rgb'].includes(g.mode) ? g.mode : 'none',
+    hex: /^#[0-9a-f]{6}$/i.test(g.hex) ? g.hex : settings.glass.hex,
+    strength: Math.max(10, Math.min(100, Number(g.strength) || 55)),
+  };
+  saveSettings();
 });
 ipcMain.on('refresh', () => refresh());
 ipcMain.on('login', () => openLogin());
