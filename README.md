@@ -148,7 +148,7 @@ The cats are built to be cheap. There is no per-frame JavaScript: each cat picks
 - **Tray ring:** the tray icon shows your session % as a small coloured ring.
 - **Header icon:** the box, a sparkle, or any image you pick (PNG/JPG/SVG/ICO, up to 2 MB).
 - **Fonts:** Anuphan, IBM Plex Sans Thai, Prompt and Noto Sans Thai, all bundled with the app.
-- **Light/dark:** follows the Windows theme.
+- **Theme:** follows Windows light/dark by default. You can also force **Dark** or **Light** from the colour panel (droplet button → ธีม) or from the tray.
 - **Multiple organizations:** switch between them from the tray.
 
 ---
@@ -176,6 +176,7 @@ The tray menu has these settings:
 - Notifications
 - Glass material
 - Liquid colour
+- Theme (system / dark / light)
 - Font
 - Header icon
 - Cats
@@ -204,7 +205,7 @@ npm start          # run in development
 npm run dist       # build installer + portable exe into dist/
 ```
 
-Pushing a tag like `v2.4.1` makes GitHub Actions (`.github/workflows/release.yml`) build both `.exe` files on Windows and attach them to a new Release.
+Pushing a tag like `v2.4.2` makes GitHub Actions (`.github/workflows/release.yml`) build both `.exe` files on Windows and attach them to a new Release.
 
 ```
 src/

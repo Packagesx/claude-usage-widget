@@ -593,7 +593,12 @@
   api.onOpenColor && api.onOpenColor(() => toggleColorPanel(true));
   if (params.get('panel')) { tab = params.get('panel') === 'glass' ? 'glass' : 'liquid'; setTimeout(() => toggleColorPanel(true), 50); }
 
+  function markTheme(t) { $('#theme-seg').querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.theme === t))); }
+  $('#theme-seg').querySelectorAll('button').forEach((b) => (b.onclick = () => { markTheme(b.dataset.theme); api.setPref && api.setPref({ theme: b.dataset.theme }); }));
+  api.onThemePref && api.onThemePref(markTheme);
+
   api.getInitial().then((r) => {
+    if (r && r.theme) markTheme(r.theme);
     if (r && r.color) color = { ...color, ...r.color };
     if (r && r.glass) glass = { ...glass, ...r.glass };
     if (r && r.icon) setIcon(r.icon);

@@ -28,6 +28,7 @@ const DEFAULTS = {
   collapsed: false,           // hide the details below the orbs
   locked: false,              // lock position (no dragging)
   lowfx: false,               // reduce ambient animation
+  theme: 'system',            // system | dark | light
   icon: 'box',                // header icon: box | spark | custom
   pets: ['orange', 'sleepy'], // pixel cats walking in the glass (ids of built-ins or custom-*)
   customPets: [],             // [{ id, mime }] images the user added
@@ -188,6 +189,9 @@ function buildTrayMenu() {
       { label: 'ประกายดาว', type: 'radio', checked: settings.icon === 'spark', click: () => setIcon('spark') },
       { label: 'เลือกรูปเอง…', type: 'radio', checked: settings.icon === 'custom', click: () => pickCustomIcon() },
     ] },
+    { label: 'ธีม', submenu: [['system', 'ตามระบบ Windows'], ['dark', 'มืด'], ['light', 'สว่าง']].map(([id, label]) => ({
+      label, type: 'radio', checked: settings.theme === id,
+      click: () => { settings.theme = id; saveSettings(); applyTheme(); buildTrayMenu(); win && win.webContents.send('theme-pref', id); } })) },
     { label: 'ฟอนต์', submenu: [
       ['anuphan', 'Anuphan (โมเดิร์น — ค่าเริ่มต้น)'], ['plex', 'IBM Plex Sans Thai (เรียบ คม)'],
       ['prompt', 'Prompt (กลมมน)'], ['noto', 'Noto Sans Thai (มาตรฐาน)'],
@@ -570,7 +574,7 @@ async function signOut() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass, icon: iconDataUrl(), pets: petList() }));
+ipcMain.handle('get-initial', () => ({ payload: lastPayload, material: currentMaterial, color: settings.color, glass: settings.glass, theme: settings.theme, icon: iconDataUrl(), pets: petList() }));
 
 // ---------- pets: pixel cats that wander around the glass ----------
 const PETS = [
@@ -661,6 +665,7 @@ ipcMain.on('set-glass', (_e, g) => {
 ipcMain.on('refresh', () => { productsAt = 0; refresh(); });
 ipcMain.on('set-pref', (_e, p) => {
   if (p && typeof p.collapsed === 'boolean') settings.collapsed = p.collapsed;
+  if (p && ['system', 'dark', 'light'].includes(p.theme)) { settings.theme = p.theme; applyTheme(); buildTrayMenu(); }
   saveSettings();
 });
 // the renderer draws a little % ring for the tray icon
@@ -832,8 +837,13 @@ function setGhost(v) {
 ipcMain.on('ui-state', (_e, st) => { if (st && typeof st === 'object') uiState = { expanded: !!st.expanded, busy: !!st.busy }; });
 
 // ---------- boot ----------
+function applyTheme() {
+  nativeTheme.themeSource = ['dark', 'light'].includes(settings.theme) ? settings.theme : 'system';
+}
+
 app.whenReady().then(() => {
   loadSettings();
+  applyTheme();
   loadHistory();
   claudeSession().setUserAgent(CHROME_UA);
   app.userAgentFallback = CHROME_UA;

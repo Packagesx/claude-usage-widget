@@ -601,3 +601,9 @@ html[data-ghost="1"].interactive .ghost-hint { opacity: 0; }
 html, body { overflow: hidden; }
 html.resizing .pets { opacity: 0; transition: opacity .12s; }
 .pets { transition: opacity .25s; }
+
+/* theme switch in the colour panel */
+.theme-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; margin-top: 6px; }
+.theme-row > span { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.theme-row .seg { grid-template-columns: repeat(3, 1fr); }
+.theme-row .seg button { font-size: 11.5px; }

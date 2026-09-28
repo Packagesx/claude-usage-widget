@@ -90,6 +90,12 @@
       <label class="speed" id="speed-row"><span>ความเร็ว RGB</span>
         <input type="range" id="speed" min="2" max="30" step="1" value="8"><em id="speed-val"></em></label>
       <label class="check" id="warn-row"><input type="checkbox" id="warn" checked> <span>เปลี่ยนเป็นสีแดงเมื่อใช้เกิน 90%</span></label>
+      <div class="theme-row"><span>ธีม</span>
+        <div class="seg" id="theme-seg" role="radiogroup" aria-label="ธีม">
+          <button type="button" role="radio" data-theme="system" aria-checked="true">ตามระบบ</button>
+          <button type="button" role="radio" data-theme="dark" aria-checked="false">🌙 มืด</button>
+          <button type="button" role="radio" data-theme="light" aria-checked="false">☀️ สว่าง</button>
+        </div></div>
       <button class="pill primary" id="btn-color-done" type="button">เสร็จ</button>
     </section>
 

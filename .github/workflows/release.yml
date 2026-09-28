@@ -13,6 +13,16 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # only the highest version tag becomes "Latest release",
+      # even if several tag builds finish in a different order
+      - name: Is this the newest tag?
+        id: latest
+        shell: bash
+        run: |
+          newest=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          echo "make_latest=$([ "$newest" = "${GITHUB_REF_NAME}" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,3 +35,4 @@ jobs:
           files: |
             dist/*.exe
           generate_release_notes: true
+          make_latest: ${{ steps.latest.outputs.make_latest }}

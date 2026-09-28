@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('widget', {
   setGlass: (g) => ipcRenderer.send('set-glass', g),
   onOpenColor: (cb) => ipcRenderer.on('open-color', () => cb()),
   setPref: (p) => ipcRenderer.send('set-pref', p),
+  onThemePref: (cb) => ipcRenderer.on('theme-pref', (_e, v) => cb(v)),
   setTrayIcon: (d) => ipcRenderer.send('tray-icon', d),
   onToggleCollapse: (cb) => ipcRenderer.on('toggle-collapse', () => cb()),
   onLocked: (cb) => ipcRenderer.on('locked', (_e, v) => cb(v)),
