@@ -607,3 +607,4 @@ html.resizing .pets { opacity: 0; transition: opacity .12s; }
 .theme-row > span { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .theme-row .seg { grid-template-columns: repeat(3, 1fr); }
 .theme-row .seg button { font-size: 11.5px; }
+#agy .prow { grid-template-columns: 112px 1fr 38px; }

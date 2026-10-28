@@ -16,6 +16,7 @@
           pts[pts.length - 1][1] = 42;
           return { rate: 18, eta: now + (58 / 18) * h * (params.get('burn') === 'safe' ? 1 : 0.55), verdict: params.get('burn') || 'runout', spark: pts, start, end: now + 2.3 * h }; })(),
         products: { title: 'This week’s usage by product', rows: [{ name: 'Claude Code', pct: 12 }, { name: 'Chats', pct: 23 }, { name: 'Cowork', pct: 65 }, { name: 'Other', pct: 0 }] },
+        agy: { rows: [{ name: 'Gemini', pct: 2, resetsAt: new Date(Date.now() + 9e6).toISOString() }, { name: 'Claude and GPT', pct: 16, resetsAt: new Date(Date.now() + 5.9e8).toISOString() }] },
         items: [
         { key: 'five_hour', th: 'เซสชันนี้', sub: 'รอบ 5 ชั่วโมง', pct: Number(params.get('s') || 42), resetsAt: new Date(now + 2.3 * h).toISOString() },
         { key: 'seven_day', th: 'สัปดาห์นี้', sub: 'ทุกโมเดล', pct: Number(params.get('w') || 83), resetsAt: new Date(now + 76 * h).toISOString() },
@@ -165,6 +166,18 @@
       </div>`).join('');
   }
 
+  function renderAgy(a) {
+    const el = $('#agy');
+    if (!a || !a.rows || !a.rows.length) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = `<div class="ph"><b>Antigravity</b></div>` + a.rows.map((r) => `
+      <div class="prow${r.pct > 0 ? '' : ' zero'}" title="${esc(r.name)} · รีเซ็ต ${esc(shortReset(r.resetsAt))}">
+        <span class="pn">${esc(r.name)}</span>
+        <div class="capsule slim" data-level="${level(r.pct)}" style="--p:${r.pct / 100}"><i></i></div>
+        <span class="pp">${Math.round(r.pct)}%</span>
+      </div>`).join('');
+  }
+
   // ---- compact pill: two minimalist rings ----
   let pillKeys = '';
   function renderPill(items) {
@@ -223,6 +236,7 @@
     else { $('#orbs').innerHTML = '<p style="grid-column:1/-1;color:var(--ink-2);text-align:center">ไม่มีข้อมูล usage สำหรับบัญชีนี้</p>'; }
 
     renderProducts(p.products);
+    renderAgy(p.agy);
     if (p.items && p.items.length) {
       renderPill(p.items); hasData = true;
       const top = Math.max(0, ...p.items.filter((i) => i.key === 'five_hour' || i.key === 'seven_day').map((i) => i.pct));

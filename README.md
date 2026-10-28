@@ -68,6 +68,7 @@ Your session stays **only on your PC**, in the app's own browser profile.
 | **Per-model weekly** | Opus and Sonnet weekly limits, when claude.ai reports them for your plan |
 | **Cloud credits** | Claude Code cloud-session credit (`iguana_necktie` in the API), shown as dollars left with the expiry date |
 | **Usage by product** | This week's split across Claude Code, Chats, Cowork and Other, read from your claude.ai usage page |
+| **Antigravity** | Quota bars from the Antigravity CLI (`agy -p /usage`), shown when `agy` is installed and signed in. Checked every 5 min; toggle in the tray |
 | **Session pace** | A sparkline of the current 5-hour window, your burn rate (%/h), and a forecast such as *"expected full at 15:07"* |
 
 Limits that claude.ai returns under internal codenames that haven't been announced (e.g. `nimbus_quill`) are hidden.
@@ -205,7 +206,7 @@ npm start          # run in development
 npm run dist       # build installer + portable exe into dist/
 ```
 
-Pushing a tag like `v2.4.2` makes GitHub Actions (`.github/workflows/release.yml`) build both `.exe` files on Windows and attach them to a new Release.
+Pushing a tag like `v2.5.0` makes GitHub Actions (`.github/workflows/release.yml`) build both `.exe` files on Windows and attach them to a new Release.
 
 ```
 src/

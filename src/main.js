@@ -5,6 +5,7 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { fetchAgyUsage } = require('./agy');
 
 const PARTITION = 'persist:claude';
 const BASE = 'https://claude.ai';
@@ -29,6 +30,7 @@ const DEFAULTS = {
   locked: false,              // lock position (no dragging)
   lowfx: false,               // reduce ambient animation
   theme: 'system',            // system | dark | light
+  agy: true,                  // show Antigravity CLI quota when `agy` is installed
   icon: 'box',                // header icon: box | spark | custom
   pets: ['orange', 'sleepy'], // pixel cats walking in the glass (ids of built-ins or custom-*)
   customPets: [],             // [{ id, mime }] images the user added
@@ -171,6 +173,8 @@ function buildTrayMenu() {
       click: (i) => { settings.alwaysOnTop = i.checked; saveSettings(); win && win.setAlwaysOnTop(i.checked); } },
     { label: 'เปิดพร้อม Windows', type: 'checkbox', checked: login.openAtLogin,
       click: (i) => { app.setLoginItemSettings({ openAtLogin: i.checked }); } },
+    { label: 'แสดงโควตา Antigravity (agy CLI)', type: 'checkbox', checked: settings.agy,
+      click: (i) => { settings.agy = i.checked; saveSettings(); refreshAgy(true); } },
     { label: 'แจ้งเตือนเมื่อใช้ถึง 80% / 95%', type: 'checkbox', checked: settings.notify,
       click: (i) => { settings.notify = i.checked; saveSettings(); } },
     { label: 'ความถี่รีเฟรช', submenu: [1, 2, 5, 10].map(interval) },
@@ -449,6 +453,25 @@ async function refreshProducts(force = false) {
   } catch {} finally { productsBusy = false; }
 }
 
+// Antigravity CLI quota. Each `agy` run boots its language server, so keep it rare.
+let lastAgy = null, agyAt = 0, agyBusy = false, agyMissing = false;
+const AGY_EVERY = 5 * 60 * 1000, AGY_MISSING_EVERY = 30 * 60 * 1000;
+async function refreshAgy(force = false) {
+  if (!settings.agy) { if (lastAgy) { lastAgy = null; if (lastPayload) send({ ...lastPayload, agy: null }); } return; }
+  const every = agyMissing ? AGY_MISSING_EVERY : AGY_EVERY;
+  if (agyBusy || (!force && Date.now() - agyAt < every)) return;
+  agyBusy = true;
+  try {
+    const r = await fetchAgyUsage();
+    agyMissing = false;
+    if (r) lastAgy = r; // keep the last good reading if one run fails
+  } catch (e) { if (e.code === 'ENOENT') { agyMissing = true; lastAgy = null; } }
+  finally {
+    agyAt = Date.now(); agyBusy = false;
+    if (lastPayload && lastPayload.state === 'ok') send({ ...lastPayload, agy: lastAgy });
+  }
+}
+
 async function refresh() {
   if (inflight) return; inflight = true;
   send({ ...(lastPayload || {}), state: 'loading' });
@@ -466,8 +489,9 @@ async function refresh() {
     const sess = items.find(i => i.key === 'five_hour');
     const burn = recordSession(sess);
     notifyReset(sess);
-    send({ state: 'ok', items, burn, products: lastProducts, org: orgLabel(org), updatedAt: Date.now() });
-    refreshProducts(); // "This week's usage by product" — throttled, arrives a moment later
+    send({ state: 'ok', items, burn, products: lastProducts, agy: lastAgy, org: orgLabel(org), updatedAt: Date.now() });
+    refreshProducts();
+    refreshAgy(); // "This week's usage by product" — throttled, arrives a moment later
     maybeNotify(items);
     const five = items.find(i => i.key === 'five_hour');
     tray && tray.setToolTip(`Claude Usage${five ? ` — Session ${Math.round(five.pct)}%` : ''}`);
@@ -662,7 +686,7 @@ ipcMain.on('set-glass', (_e, g) => {
   // switching between truly-clear and blurred glass needs a new window
   if (windowMaterial() !== currentMaterial) setTimeout(relaunch, 350);
 });
-ipcMain.on('refresh', () => { productsAt = 0; refresh(); });
+ipcMain.on('refresh', () => { productsAt = 0; agyAt = 0; refresh(); });
 ipcMain.on('set-pref', (_e, p) => {
   if (p && typeof p.collapsed === 'boolean') settings.collapsed = p.collapsed;
   if (p && ['system', 'dark', 'light'].includes(p.theme)) { settings.theme = p.theme; applyTheme(); buildTrayMenu(); }
